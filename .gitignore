@@ -137,3 +137,5 @@ data
 cached
 
 runs
+checkpoints/
+outputs/

@@ -289,11 +289,11 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
                 # print("decoder_role_ids:", decoder_role_ids)
                 # print("decoder_turn_ids:", decoder_turn_ids)
 
-                print(tokenizer.decode(input_ids[0]))
-                # print(tokenizer.decode(role_ids[0]))
-                print(tokenizer.decode(decoder_input_ids[0]))
-                print(tokenizer.decode(decoder_label_ids[0]))
-                raise Exception("stop")
+                # print(tokenizer.decode(input_ids[0]))
+                # # print(tokenizer.decode(role_ids[0]))
+                # print(tokenizer.decode(decoder_input_ids[0]))
+                # print(tokenizer.decode(decoder_label_ids[0]))
+                # raise Exception("stop")
 
                 outputs = model(input_ids, attention_mask=input_ids.ne(tokenizer.pad_token_id), decoder_input_ids=decoder_input_ids, labels=decoder_label_ids,
                     # decoder_turn_ids=decoder_turn_ids, decoder_role_ids=decoder_role_ids, turn_ids=turn_ids,

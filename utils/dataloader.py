@@ -26,7 +26,7 @@ class ESDDataset(Dataset):
     def __init__(self, tokenizer: PreTrainedTokenizer, args, df, comet, comet_st, block_size=512, evaluate=False, strategy=True, test=False):
         block_size = block_size - (tokenizer.model_max_length - tokenizer.max_len_single_sentence)
         self.tokenizer = tokenizer
-        directory = args.data_cache_dir
+        directory = os.path.join(args.data_cache_dir, args.data_path.split('/')[-1])
         if not os.path.exists(directory):
             os.makedirs(directory)
         
