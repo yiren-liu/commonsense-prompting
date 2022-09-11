@@ -189,7 +189,6 @@ class InputFeatures_blender(object):
         self.comet_st_mask = comet_st_mask
 
 def construct_conv_ESD(idx, row, comet_row, comet_st_row, tokenizer, eos = True, pad=True, cls=False, evaluate=False, strategy=True, generation=False):
-
     #  process input text
     inputs, roles, turns, strategy_labels, _ = _get_inputs_from_text("EOS".join(row.split("EOS")[:-1]), tokenizer, strategy=strategy)
     # process output (decoder input) text
@@ -208,6 +207,7 @@ def construct_conv_ESD(idx, row, comet_row, comet_st_row, tokenizer, eos = True,
     comet_st_ids, comet_st_mask = _get_comet_input(comet_st_row, tokenizer, max_num_attr=20)
     feature = InputFeatures_blender(feature, d_feature, comet_ids, comet_mask, emotion, comet_st_ids, comet_st_mask)
     return feature
+
 
 
 def _get_comet_input(comet_row, tokenizer, max_num_attr=30, max_len_attr=10):
