@@ -49,13 +49,8 @@ class Args():
         self.num_train_epochs = 10  # raw 10
         self.max_steps = -1
         self.warmup_steps = 120  # raw 120
-<<<<<<< HEAD
         self.logging_steps = 200
         self.save_steps = 200
-=======
-        self.logging_steps = 100
-        self.save_steps = 100
->>>>>>> e1d43b71498571cc676893705d5ab73653f4f0f6
         self.save_total_limit = None
         self.eval_all_checkpoints = False
         self.no_cuda = False
