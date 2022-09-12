@@ -25,8 +25,9 @@ def getBlenderbotTokenizerATOMIC2020(args):
 class BlenderbotATOMIC2020(BlenderbotSmallForConditionalGeneration):
     def __init__(self, config: BlenderbotSmallConfig):
         super().__init__(config)
+        pass
 
-    def forward(self, input_ids=None, attention_mask=None, decoder_input_ids=None, decoder_attention_mask=None, labels=None, **kwargs):
+    def forward(self, input_ids=None, attention_mask=None, labels=None, **kwargs):
         # model(input_ids, attention_mask=input_ids.ne(tokenizer.pad_token_id),
         # decoder_input_ids=decoder_input_ids, decoder_turn_ids=decoder_turn_ids,
         # decoder_role_ids=decoder_role_ids, turn_ids=turn_ids,
@@ -34,7 +35,12 @@ class BlenderbotATOMIC2020(BlenderbotSmallForConditionalGeneration):
         # decoder_strategy_ids=decoder_strategy_ids,
         # comet_embs=comet_embs, comet_mask=comet_mask,
         # comet_embs_st=comet_embs_st, comet_mask_st=comet_mask_st, emotion=emotion)
-        output = super().forward(input_ids=input_ids, attention_mask=attention_mask, decoder_input_ids=decoder_input_ids, decoder_attention_mask=decoder_attention_mask, labels=labels, **kwargs)
+        output = super().forward(
+            input_ids=input_ids, attention_mask=attention_mask,
+        #     decoder_input_ids=decoder_input_ids,
+        #     decoder_attention_mask=decoder_attention_mask,
+            labels=labels, **kwargs
+        )
         return output
 
 #     def generate(self, **kwargs):

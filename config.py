@@ -2,7 +2,8 @@ import os
 
 class Args():
     def __init__(self):
-        TAG = 'all_loss'
+        TAG = 'sample_100'
+        # TAG = 'sample_0.2'
         # TAG = 'emotion'
         # TAG = 'ablation_strategy'
         # TAG = 'ablation_situation'
@@ -17,6 +18,7 @@ class Args():
         self.tokenizer_name = "facebook/blenderbot_small-90M"
         # self.data_path = "./data/dataset"
         self.data_path = "./data/dataset/sample_100"
+        # self.data_path = "./data/dataset/sample_0.2"
         self.train_file_name = "trainWithStrategy_short.tsv"
         self.eval_file_name = "devWithStrategy_short.tsv"
         self.test_file_name = "testWithStrategy_short.tsv"
@@ -43,11 +45,11 @@ class Args():
         self.adam_epsilon = 1e-8  # RAW 8
         self.max_grad_norm = 1.0
         # self.num_train_epochs = 8  # raw 10
-        self.num_train_epochs = 2  # raw 10
+        self.num_train_epochs = 10  # raw 10
         self.max_steps = -1
         self.warmup_steps = 120  # raw 120
-        self.logging_steps = 30
-        self.save_steps = 30
+        self.logging_steps = 100
+        self.save_steps = 100
         self.save_total_limit = None
         self.eval_all_checkpoints = False
         self.no_cuda = False
