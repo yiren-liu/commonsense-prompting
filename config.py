@@ -2,7 +2,9 @@ import os
 
 class Args():
     def __init__(self):
-        TAG = 'all_loss'
+        TAG = 'sample_0.2'
+        # TAG = 'sample_100'
+        # TAG = 'all_loss'
         # TAG = 'emotion'
         # TAG = 'ablation_strategy'
         # TAG = 'ablation_situation'
@@ -16,7 +18,8 @@ class Args():
         self.config_name = "facebook/blenderbot_small-90M"
         self.tokenizer_name = "facebook/blenderbot_small-90M"
         # self.data_path = "./data/dataset"
-        self.data_path = "./data/dataset/sample_100"
+        # self.data_path = "./data/dataset/sample_100"
+        self.data_path = "./data/dataset/sample_0.2"
         self.train_file_name = "trainWithStrategy_short.tsv"
         self.eval_file_name = "devWithStrategy_short.tsv"
         self.test_file_name = "testWithStrategy_short.tsv"
@@ -35,19 +38,19 @@ class Args():
         self.generation = False
         self.generate_and_eval = False
         self.evaluate_during_training = True
-        self.per_gpu_train_batch_size = 2
-        self.per_gpu_eval_batch_size = 4
+        self.per_gpu_train_batch_size = 6
+        self.per_gpu_eval_batch_size = 12
         self.gradient_accumulation_steps = 1
         self.learning_rate = 2e-5  # RAW 2
         self.weight_decay = 0
         self.adam_epsilon = 1e-8  # RAW 8
         self.max_grad_norm = 1.0
         # self.num_train_epochs = 8  # raw 10
-        self.num_train_epochs = 2  # raw 10
+        self.num_train_epochs = 10  # raw 10
         self.max_steps = -1
         self.warmup_steps = 120  # raw 120
-        self.logging_steps = 30
-        self.save_steps = 30
+        self.logging_steps = 200
+        self.save_steps = 200
         self.save_total_limit = None
         self.eval_all_checkpoints = False
         self.no_cuda = False
