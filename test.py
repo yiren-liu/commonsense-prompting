@@ -295,7 +295,10 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
                 # print(tokenizer.decode(decoder_label_ids[0]))
                 # raise Exception("stop")
 
-                outputs = model(input_ids, attention_mask=input_ids.ne(tokenizer.pad_token_id), decoder_input_ids=decoder_input_ids, labels=decoder_label_ids,
+                # raise NotImplementedError # is the decoder_input_ids correct? not shifted by 1?
+
+                outputs = model(input_ids, attention_mask=input_ids.ne(tokenizer.pad_token_id), labels=decoder_label_ids,
+                    # decoder_input_ids=decoder_input_ids,
                     # decoder_turn_ids=decoder_turn_ids, decoder_role_ids=decoder_role_ids, turn_ids=turn_ids,
                     # role_ids=role_ids, decoder_strategy_ids=decoder_strategy_ids, 
                     # comet_embs=comet_embs, comet_mask=comet_mask, comet_embs_st=comet_embs_st, 
@@ -556,16 +559,17 @@ def evaluate(args, model: PreTrainedModel, tokenizer: PreTrainedTokenizer, eval_
             # lm_loss = outputs.lm_loss
             # ppl = torch.exp(loss)
             num_samples.append(
-                (decoder_label_ids.cpu().numpy() != -100).astype(np.int).sum()
+                (decoder_label_ids.cpu().numpy() != -100).astype(np.int64).sum()
             )
             eval_loss += loss.sum().item() * (decoder_label_ids.cpu().numpy()
-                                                != -100).astype(np.int).sum()
+                                                != -100).astype(np.int64).sum()
 
 
         nb_eval_steps += 1
 
     eval_loss = eval_loss / sum(num_samples)
     perplexity = torch.exp(torch.tensor(eval_loss)).item()
+    print("Eval perplexity: ", perplexity)
     # np_strategy = np.array(strategy_probs)
     # np_cls_labels = np.array(cls_labels_list)
     # result = {"eval_perplexity": perplexity, "eval_emotion_predict_accuracy": sum(emo_hits)/len(emo_hits), "eval_strategy_predict_accuracy": sum(strategy_hits)/len(strategy_hits), "eval_number_of_evaluated_examples": len(emo_hits)}
@@ -707,7 +711,7 @@ def generate(args):
 
         chat_history_ids = model.generate(
             input_ids,
-            **paras, max_length=512,min_length=5,num_beams=1,
+            **paras, max_length=100,min_length=5,num_beams=1,
             pad_token_id=0,use_cache=True,
             eos_token_id=tokenizer.eos_token_id, temperature=0.7,
             top_p=0.3, top_k = 30, do_sample=True, repetition_penalty=1.03
@@ -891,6 +895,7 @@ if __name__ == "__main__":
         args.test_dataset = ESDDataset(tokenizer, args, df_test, comet_test,
                                        st_comet_test, evaluate=True, strategy=args.strategy, test=True)
 
+        # # Training
         global_step, tr_loss = train(
             args, args.train_dataset, model, tokenizer)
         logger.info(" global_step = %s, average loss = %s",
@@ -902,6 +907,8 @@ if __name__ == "__main__":
         model.to(args.device)
         test_results = evaluate(args, model, tokenizer,
                                 args.test_dataset, "of test set")
+        
+        # raise NotImplementedError # figure out the perplexity issue
 
 
     generate(args)
