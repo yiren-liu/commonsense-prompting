@@ -27,6 +27,7 @@ from transformers import (
 )
 from torch.optim import AdamW
 
+os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
 try:
     from torch.utils.tensorboard import SummaryWriter
