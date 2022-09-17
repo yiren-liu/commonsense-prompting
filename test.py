@@ -363,7 +363,7 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
                         "lr", scheduler.get_last_lr()[0], global_step)
                     tb_writer.add_scalar(
                         "loss", (tr_loss - logging_loss) / args.logging_steps, global_step)
-                    logger.info("lr: %f, step: %d, loss: %f, lm_loss: %f", scheduler.get_last_lr()[0],
+                    logger.info("lr: %f, step: %d, loss: %f", scheduler.get_last_lr()[0],
                                 global_step, (tr_loss - logging_loss) /
                                 args.logging_steps,)
 
