@@ -14,7 +14,7 @@ def getBartTokenizerATOMIC2020(args):
         "[Question]", "[Reflection of feelings]", "[Information]", "[Restatement or Paraphrasing]",
         "[Others]", "[Self-disclosure]", "[Affirmation and Reassurance]", "[Providing Suggestions]",
         "[None]"
-        ]
+    ]
     tokenizer.add_tokens(additional_special_tokens)
     return tokenizer
 
