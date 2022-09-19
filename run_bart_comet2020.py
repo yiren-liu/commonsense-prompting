@@ -32,7 +32,7 @@ except ImportError:
     from tensorboardX import SummaryWriter
 
 from tqdm import tqdm, trange
-
+MINITERS=200
 
 from utils.dataloader import ESDDatasetBartCOMET2020
 from models.BART import BartATOMIC2020, getBartTokenizerATOMIC2020
@@ -211,7 +211,7 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
         #     for paras in model.model.decoder.parameters():
         #         paras.requires_grad = True
 
-        epoch_iterator = tqdm(train_dataloader, desc="Training Epoch: %s"%epoch)
+        epoch_iterator = tqdm(train_dataloader, desc="Training Epoch: %s"%epoch, miniters=MINITERS)
         for step, batch in enumerate(epoch_iterator):
             # print("step:",step)
             # Skip past any already trained steps if resuming training
@@ -475,7 +475,7 @@ def evaluate(args, model: PreTrainedModel, tokenizer: PreTrainedTokenizer, eval_
     # strategy_hits_topk = [[] for _ in range(7)]
     strategy_hits = []
 
-    for batch in tqdm(eval_dataloader, desc="Evaluating..."):
+    for batch in tqdm(eval_dataloader, desc="Evaluating...", miniters=MINITERS):
         model.train()
         input_ids, position_ids, turn_ids, role_ids, labels, cls_positions, cls_labels, strategy_ids, decoder_input_ids, decoder_position_ids, decoder_turn_ids, decoder_role_ids, decoder_labels, decoder_cls_positions, decoder_cls_labels, decoder_strategy_ids, comet_ids, comet_mask, emotion, comet_ids_st, comet_mask_st = batch
         if input_ids.shape[1] > 512:
@@ -650,7 +650,7 @@ def generate(args):
     strategy_hits = []
     strategy_record = []
     strategy_hits_topk = [[] for _ in range(8)]
-    for idx, (c_text, comet_row, comet_st_row) in tqdm(enumerate(zip(chat_texts[:-1], comet[:-1], comet_st[:-1])), desc="Testing", total=len(chat_texts[:-1])):
+    for idx, (c_text, comet_row, comet_st_row) in tqdm(enumerate(zip(chat_texts[:-1], comet[:-1], comet_st[:-1])), desc="Testing", total=len(chat_texts[:-1]), miniters=MINITERS):
         if "EOS" not in c_text:
             continue
         # if idx>=100:
