@@ -21,9 +21,6 @@ from transformers import (
     get_linear_schedule_with_warmup,
     PreTrainedModel,
     PreTrainedTokenizer,
-    BlenderbotSmallTokenizer,
-    BlenderbotSmallForConditionalGeneration,
-    BlenderbotSmallConfig
 )
 from torch.optim import AdamW
 
@@ -37,10 +34,10 @@ except ImportError:
 from tqdm import tqdm, trange
 
 
-from utils.dataloader import ESDDataset, construct_conv_ESD
-from models.blenderbot import getBlenderbotTokenizerATOMIC2020, BlenderbotATOMIC2020
+from utils.dataloader import ESDDatasetBartCOMET2020
+from models.BART import BartATOMIC2020, getBartTokenizerATOMIC2020
 from utils.evaluation import summary, Metric
-from config import Args
+from config_bart_comet2020 import Args
 
 # Configs
 # logger
@@ -69,7 +66,7 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
     train_sampler = RandomSampler(
         train_dataset) if args.local_rank == -1 else DistributedSampler(train_dataset)
     train_dataloader = DataLoader(
-        train_dataset, sampler=train_sampler, batch_size=args.train_batch_size, collate_fn=ESDDataset.collate, drop_last=False
+        train_dataset, sampler=train_sampler, batch_size=args.train_batch_size, collate_fn=ESDDatasetBartCOMET2020.collate, drop_last=False
     )
 
     if args.max_steps > 0:
@@ -224,11 +221,20 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
 
             input_ids, position_ids, turn_ids, role_ids, labels, cls_positions, cls_labels, strategy_ids, decoder_input_ids, decoder_position_ids, decoder_turn_ids, \
                 decoder_role_ids, decoder_labels, decoder_cls_positions, decoder_cls_labels, decoder_strategy_ids, comet_ids, comet_mask, emotion, comet_ids_st, comet_mask_st = batch
+            
             # print(role_ids)
             # print(input_ids)
             # for item in input_ids:
             #     print(len(item))
             #     print(tokenizer.decode(item))
+            # for item in decoder_labels:
+            #     print(len(item))
+            #     item[item==-100] = 1
+            #     print(tokenizer.decode(item))
+            # raise Exception("debug")
+
+
+
             # print(1 / 0)
             decoder_strategy_ids = decoder_strategy_ids[:, 0]
             decoder_strategy_ids = decoder_strategy_ids.to(args.device)
@@ -440,7 +446,7 @@ def evaluate(args, model: PreTrainedModel, tokenizer: PreTrainedTokenizer, eval_
 
     eval_sampler = SequentialSampler(eval_dataset)
     eval_dataloader = DataLoader(
-        eval_dataset, sampler=eval_sampler, batch_size=args.eval_batch_size, collate_fn=ESDDataset.collate, drop_last=False
+        eval_dataset, sampler=eval_sampler, batch_size=args.eval_batch_size, collate_fn=ESDDatasetBartCOMET2020.collate, drop_last=False
     )
 
     if args.fp16:
@@ -599,7 +605,7 @@ def generate(args):
     # print(tokenizer.encode(['others]']))
     # print(1 / 0)
 
-    model = BlenderbotATOMIC2020.from_pretrained(args.output_dir,
+    model = BartATOMIC2020.from_pretrained(args.output_dir,
         from_tf=False)
     # C = model.model.encoder.strategy_embedding.weight[:8,:]
     # C = C.cpu().detach().numpy()
@@ -654,7 +660,7 @@ def generate(args):
         # gts.append(" ".join(tokens[1:]))
         # = max(tokenizer.encode(tokens[0]))
         chat_history = c_text
-        f = construct_conv_ESD(idx, chat_history, comet_row, comet_st_row, tokenizer, eos = True, pad=False, cls=False, strategy=False, generation=True)
+        f = args.test_dataset.construct_conv_ESD(idx, chat_history, comet_row, comet_st_row, tokenizer, eos = True, pad=False, cls=False, strategy=False, generation=True)
         if len(f.input_ids) >= args.block_size:
             f.input_ids = f.input_ids[-args.block_size:]
             f.input_ids[0] = tokenizer.encode(tokenizer.cls_token)[0]
@@ -851,11 +857,11 @@ if __name__ == "__main__":
     set_seed(args)
 
     # load tokenizer
-    tokenizer = getBlenderbotTokenizerATOMIC2020(args)
+    tokenizer = getBartTokenizerATOMIC2020(args)
     args.tokenizer = tokenizer
 
     # model = BlenderbotSmallForConditionalGeneration.from_pretrained(args.model_name_or_path, cache_dir=args.model_cache_dir)
-    model = BlenderbotATOMIC2020.from_pretrained(
+    model = BartATOMIC2020.from_pretrained(
         args.model_name_or_path, cache_dir=args.model_cache_dir)
     model.resize_token_embeddings(len(tokenizer))
     model.to(args.device)
@@ -890,11 +896,11 @@ if __name__ == "__main__":
         with open(args.data_path+"/" + args.test_file_name, "r", encoding="utf-8") as f:
             df_test = f.read().split("\n")
 
-        args.train_dataset = ESDDataset(tokenizer, args, df_trn, comet_trn,
+        args.train_dataset = ESDDatasetBartCOMET2020(tokenizer, args, df_trn, comet_trn,
                                         st_comet_trn, strategy=args.strategy, evaluate=False, test=False)
-        args.eval_dataset = ESDDataset(tokenizer, args, df_val, comet_val,
+        args.eval_dataset = ESDDatasetBartCOMET2020(tokenizer, args, df_val, comet_val,
                                        st_comet_val, evaluate=True, strategy=args.strategy, test=False)
-        args.test_dataset = ESDDataset(tokenizer, args, df_test, comet_test,
+        args.test_dataset = ESDDatasetBartCOMET2020(tokenizer, args, df_test, comet_test,
                                        st_comet_test, evaluate=True, strategy=args.strategy, test=True)
 
         # # Training
@@ -904,7 +910,7 @@ if __name__ == "__main__":
                     global_step, tr_loss)
 
         # evaluation
-        model = BlenderbotATOMIC2020.from_pretrained(
+        model = BartATOMIC2020.from_pretrained(
             args.output_dir, from_tf=False)
         model.to(args.device)
         test_results = evaluate(args, model, tokenizer,
