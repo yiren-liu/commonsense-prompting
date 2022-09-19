@@ -41,8 +41,8 @@ class Args():
         self.generation = False
         self.generate_and_eval = False
         self.evaluate_during_training = True
-        self.per_gpu_train_batch_size = 6
-        self.per_gpu_eval_batch_size = 12        
+        self.per_gpu_train_batch_size = 5
+        self.per_gpu_eval_batch_size = 8        
         # self.per_gpu_train_batch_size = 2
         # self.per_gpu_eval_batch_size = 4
         self.gradient_accumulation_steps = 1

@@ -32,7 +32,7 @@ except ImportError:
     from tensorboardX import SummaryWriter
 
 from tqdm import tqdm, trange
-MINITERS=20
+MINITERS=200
 
 from utils.dataloader import ESDDatasetBartCOMET2020
 from models.BART import BartATOMIC2020, getBartTokenizerATOMIC2020
