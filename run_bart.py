@@ -919,6 +919,15 @@ if __name__ == "__main__":
         # raise NotImplementedError # figure out the perplexity issue
 
 
+    with open(args.data_path+"/" + args.test_comet_file, "r", encoding="utf-8") as f:
+        comet_test = f.read().split("\n")
+    with open(args.data_path+"/" + args.situation_test_comet_file, "r", encoding="utf-8") as f:
+        st_comet_test = f.read().split("\n")
+    with open(args.data_path+"/" + args.test_file_name, "r", encoding="utf-8") as f:
+        df_test = f.read().split("\n")
+    args.test_dataset = ESDDatasetBartCOMET2020(tokenizer, args, df_test, comet_test,
+                                    st_comet_test, evaluate=True, strategy=args.strategy, test=True)
+
     generate(args)
 
     # raise NotImplementedError

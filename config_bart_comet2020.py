@@ -36,10 +36,11 @@ class Args():
         self.model_cache_dir = './cached/models/bart-comet2020'
         self.data_cache_dir = './cached/data/bart-comet2020'
         self.block_size = 512
-        self.do_train = True
-        self.do_eval = False
-        self.generation = False
-        self.generate_and_eval = False
+        # self.do_train = True
+        self.do_train = False
+        # self.do_eval = False
+        # self.generation = False
+        # self.generate_and_eval = False
         self.evaluate_during_training = True
         self.per_gpu_train_batch_size = 5
         self.per_gpu_eval_batch_size = 8        
