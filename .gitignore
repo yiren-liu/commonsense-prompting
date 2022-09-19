@@ -140,3 +140,5 @@ runs
 checkpoints/
 outputs/
 submit_train.swb
+*.err
+*.out

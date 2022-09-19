@@ -2,9 +2,9 @@ import os
 
 class Args():
     def __init__(self):
-        # TAG = 'all_data'
+        TAG = 'all_data'
         # TAG = 'sample_0.2'
-        TAG = 'sample_100'
+        # TAG = 'sample_100'
         # TAG = 'all_loss'
         # TAG = 'emotion'
         # TAG = 'ablation_strategy'
@@ -19,8 +19,8 @@ class Args():
         self.config_name = "ref/comet-atomic-2020/models/comet_atomic2020_bart/comet-atomic_2020_BART"
         self.tokenizer_name = "ref/comet-atomic-2020/models/comet_atomic2020_bart/comet-atomic_2020_BART"
 
-        # self.data_path = "./data/dataset"
-        self.data_path = "./data/dataset/sample_100"
+        self.data_path = "./data/dataset"
+        # self.data_path = "./data/dataset/sample_100"
         # self.data_path = "./data/dataset/sample_0.2"
 
         self.train_file_name = "trainWithStrategy_short.tsv"
@@ -41,10 +41,10 @@ class Args():
         self.generation = False
         self.generate_and_eval = False
         self.evaluate_during_training = True
-        # self.per_gpu_train_batch_size = 6
-        # self.per_gpu_eval_batch_size = 12        
-        self.per_gpu_train_batch_size = 2
-        self.per_gpu_eval_batch_size = 4
+        self.per_gpu_train_batch_size = 6
+        self.per_gpu_eval_batch_size = 12        
+        # self.per_gpu_train_batch_size = 2
+        # self.per_gpu_eval_batch_size = 4
         self.gradient_accumulation_steps = 1
         self.learning_rate = 2e-5  # RAW 2
         self.weight_decay = 0
