@@ -132,3 +132,13 @@ dmypy.json
 
 ref/
 .DS_Store
+
+data
+cached
+
+runs
+checkpoints/
+outputs/
+submit_train.swb
+*.err
+*.out
