@@ -188,6 +188,8 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
     set_seed(args)  # Added here for reproducibility
     import numpy as np
     np.set_printoptions(threshold=np.inf)
+
+    print_cnt = 0
     for epoch in train_iterator:
         # if epoch < 3:
         #     for paras in model.model.encoder.parameters():
@@ -222,18 +224,18 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
             input_ids, position_ids, turn_ids, role_ids, labels, cls_positions, cls_labels, strategy_ids, decoder_input_ids, decoder_position_ids, decoder_turn_ids, \
                 decoder_role_ids, decoder_labels, decoder_cls_positions, decoder_cls_labels, decoder_strategy_ids, comet_ids, comet_mask, emotion, comet_ids_st, comet_mask_st = batch
             
-            # print(role_ids)
-            # print(input_ids)
-            # for item in input_ids:
-            #     print(len(item))
-            #     print(tokenizer.decode(item))
-            # for item in decoder_labels:
-            #     print(len(item))
-            #     item[item==-100] = 1
-            #     print(tokenizer.decode(item))
-            # raise Exception("debug")
-
-
+            if print_cnt==0:
+                # print(role_ids)
+                # print(input_ids)
+                for item in input_ids[:1]:
+                    print(len(item))
+                    print(tokenizer.decode(item))
+                for item in decoder_labels[:1]:
+                    print(len(item))
+                    item[item==-100] = 1
+                    print(tokenizer.decode(item))
+                # raise Exception("debug")
+                print_cnt+=1
 
             # print(1 / 0)
             decoder_strategy_ids = decoder_strategy_ids[:, 0]
