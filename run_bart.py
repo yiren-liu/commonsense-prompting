@@ -179,6 +179,7 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
 
     tr_loss, logging_loss, tr_lm_loss, logging_lm_loss, tr_emo_loss, \
         logging_emo_loss, tr_strategy_loss, logging_strategy_loss, tr_intensity_loss, logging_intensity_loss = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+    tr_ppl, logging_ppl = 0.0, 0.0
     best_ppl = 1e8
 
     model.zero_grad()
@@ -316,6 +317,7 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
                 # print(outputs.loss, outputs.emo_loss, outputs.lm_loss)
                 # print(1 / 0)
                 loss = outputs.loss
+                ppl = torch.exp(loss)
                 # lm_loss = ppl = outputs.lm_loss
                 # emo_loss = outputs.emo_loss
                 # intensity_loss = outputs.intensity_loss
@@ -340,6 +342,7 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
                 backward_loss.backward()
 
             tr_loss += loss.item()
+            tr_ppl += ppl.item()
             # tr_lm_loss += lm_loss.item()
             # tr_emo_loss += emo_loss.item()
             # tr_strategy_loss += strategy_loss.item()
@@ -370,9 +373,11 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
                         "lr", scheduler.get_last_lr()[0], global_step)
                     tb_writer.add_scalar(
                         "loss", (tr_loss - logging_loss) / args.logging_steps, global_step)
-                    logger.info("lr: %f, step: %d, loss: %f", scheduler.get_last_lr()[0],
+                    tb_writer.add_scalar(
+                        "ppl", (tr_ppl - logging_ppl) / args.logging_steps, global_step)
+                    logger.info("lr: %f, step: %d, loss: %f, ppl: %f", scheduler.get_last_lr()[0],
                                 global_step, (tr_loss - logging_loss) /
-                                args.logging_steps,)
+                                args.logging_steps, (tr_ppl - logging_ppl) / args.logging_steps)
 
                     # logger.info("lr: %f, step: %d, loss: %f, lm_loss: %f, emo_loss: %f, strategy_loss: %f, intensity_loss: %f", scheduler.get_last_lr()[0],
                     #             global_step, (tr_loss - logging_loss) /
@@ -383,6 +388,7 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
                     #             (tr_intensity_loss - logging_intensity_loss) / args.logging_steps)
 
                     logging_loss = tr_loss
+                    logging_ppl = tr_ppl
                     # logging_lm_loss = tr_lm_loss
                     # logging_emo_loss = tr_emo_loss
                     # logging_strategy_loss = tr_strategy_loss
