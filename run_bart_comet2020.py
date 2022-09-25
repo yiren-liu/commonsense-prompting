@@ -600,13 +600,13 @@ def evaluate(args, model: PreTrainedModel, tokenizer: PreTrainedTokenizer, eval_
 
     return result
 
-def generate(args):
+def generate(args, model):
     tokenizer = args.tokenizer
     # print(tokenizer.encode(['others]']))
     # print(1 / 0)
 
-    model = BartATOMIC2020.from_pretrained(args.output_dir,
-        from_tf=False)
+    # model = BartATOMIC2020.from_pretrained(args.output_dir,
+    #     from_tf=False)
     # C = model.model.encoder.strategy_embedding.weight[:8,:]
     # C = C.cpu().detach().numpy()
     # from sklearn.metrics.pairwise import cosine_similarity
@@ -926,7 +926,9 @@ if __name__ == "__main__":
         df_test = f.read().split("\n")
     args.test_dataset = ESDDatasetBartCOMET2020(tokenizer, args, df_test, comet_test,
                                     st_comet_test, evaluate=True, strategy=args.strategy, test=True)
-                                    
-    generate(args)
+
+    model = BartATOMIC2020.from_pretrained(args.output_dir,
+        from_tf=False)           
+    generate(args, model)
 
     # raise NotImplementedError
