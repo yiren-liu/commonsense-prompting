@@ -455,7 +455,8 @@ class ESDDatasetBartCOMET2020(Dataset):
         turns = []
         strategy_labels=[]
         
-        srcs += " [GEN]"
+        # srcs += " [GEN]"
+        srcs += " Response:"
         srcs = srcs.split(" EOS")
         emotion = None
         for idx, src in enumerate(srcs):
