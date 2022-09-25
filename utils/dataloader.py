@@ -401,7 +401,7 @@ class ESDDatasetBartCOMET2020(Dataset):
     
     def construct_conv_ESD(self, idx, row, comet_row, comet_st_row, tokenizer, eos = True, pad=True, cls=False, evaluate=False, strategy=True, generation=False):
         #  process input text
-        inputs, roles, turns, strategy_labels, _ = self._get_inputs_from_text("EOS".join(row.split("EOS")[:-1]), tokenizer, strategy=strategy)
+        inputs, roles, turns, strategy_labels, _ = self._get_inputs_from_text("EOS".join(row.split("EOS")[:-1]), tokenizer, strategy=strategy, add_gen=True)
         # process output (decoder input) text
         d_inputs, d_roles, d_turns, d_strategy_labels, emotion = self._get_inputs_from_text(row.split("EOS")[-1], tokenizer, strategy=strategy)
 
@@ -448,14 +448,14 @@ class ESDDatasetBartCOMET2020(Dataset):
         assert len(comet_mask) == max_num_attr
         return comet_ids, comet_mask
 
-    def _get_inputs_from_text(self, text, tokenizer, strategy=True, cls = False):
+    def _get_inputs_from_text(self, text, tokenizer, strategy=True, cls = False, add_gen=False):
         srcs = text.strip()
         inputs = []
         roles = []
         turns = []
         strategy_labels=[]
         
-        srcs += " [GEN]"
+        if add_gen: srcs += " [GEN]"
         srcs = srcs.split(" EOS")
         emotion = None
         for idx, src in enumerate(srcs):
