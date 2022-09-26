@@ -594,11 +594,13 @@ def evaluate(args, model: PreTrainedModel, tokenizer: PreTrainedTokenizer, eval_
     eval_loss = eval_loss / sum(num_samples)
     perplexity = torch.exp(torch.tensor(eval_loss)).item()
     print("Eval perplexity: ", perplexity)
+    print("Eval loss: ", eval_loss)
     # np_strategy = np.array(strategy_probs)
     # np_cls_labels = np.array(cls_labels_list)
     # result = {"eval_perplexity": perplexity, "eval_emotion_predict_accuracy": sum(emo_hits)/len(emo_hits), "eval_strategy_predict_accuracy": sum(strategy_hits)/len(strategy_hits), "eval_number_of_evaluated_examples": len(emo_hits)}
     result = {
         "eval_perplexity": perplexity, 
+        "eval_loss": eval_loss, 
         # "eval_emotion_predict_accuracy": sum(emo_hits) / len(emo_hits), 
         # "eval_strategy_predict_accuracy": sum(strategy_hits) / len(strategy_hits),
         # "eval_number_of_evaluated_examples": len(emo_hits)
