@@ -2,7 +2,8 @@ import os
 
 class Args():
     def __init__(self):
-        TAG = 'all_data'
+        TAG = 'relConstraint'
+        # TAG = 'all_data'
         # TAG = 'sample_0.2'
         # TAG = 'sample_100'
         # TAG = 'all_loss'
@@ -35,17 +36,18 @@ class Args():
         # self.situation_train_file_name = "trainSituation.txt"
         # self.situation_eval_file_name = "devSituation.txt"
         # self.situation_test_file_name = "testSituation.txt"
-        self.situation_train_file_name = "trainComet_st_relAll.txt"
-        self.situation_eval_file_name = "devComet_st_relAll.txt"
-        self.situation_test_file_name = "testComet_st_relAll.txt"
-        # self.situation_train_file_name = "trainComet_st_relConstraint.txt"
-        # self.situation_eval_file_name = "devComet_st_relConstraint.txt"
-        # self.situation_test_file_name = "testComet_st_relConstraint.txt"
+        # self.situation_train_file_name = "trainComet_st_relAll.txt"
+        # self.situation_eval_file_name = "devComet_st_relAll.txt"
+        # self.situation_test_file_name = "testComet_st_relAll.txt"
+        self.situation_train_file_name = "trainComet_st_relConstraint.txt"
+        self.situation_eval_file_name = "devComet_st_relConstraint.txt"
+        self.situation_test_file_name = "testComet_st_relConstraint.txt"
 
 
         self.model_cache_dir = './cached/models/bart'
         # self.data_cache_dir = './cached/data/bart/add_context_add_strategy'
-        self.data_cache_dir = './cached/data/bart/add_contextCOMET'
+        # self.data_cache_dir = './cached/data/bart/add_contextCOMET'
+        self.data_cache_dir = './cached/data/bart/add_contextCOMET_relConstraint'
         self.block_size = 512
         self.do_train = True
         self.do_eval = False
