@@ -384,6 +384,11 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
                                 global_step, (tr_loss - logging_loss) /
                                 args.logging_steps, (tr_ppl - logging_ppl) / args.logging_steps)
 
+                    print(
+                        "lr: %f, step: %d, loss: %f"%(scheduler.get_last_lr()[0],
+                        global_step, (tr_loss - logging_loss) / args.logging_steps)
+                    )
+
                     # logger.info("lr: %f, step: %d, loss: %f, lm_loss: %f, emo_loss: %f, strategy_loss: %f, intensity_loss: %f", scheduler.get_last_lr()[0],
                     #             global_step, (tr_loss - logging_loss) /
                     #             args.logging_steps, (tr_lm_loss -

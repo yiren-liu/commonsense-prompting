@@ -21,3 +21,21 @@ blenderbot:
 [CLS] i need some tips to overcome from that problem __end__ hey. how can i help? __end__ give me some tips to get succeed in my life __end__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__
 24
 okay. well lets start with exactly what the problem is. what kind of tips do you need? __end__ __start__ __start__ __start__
+
+
+COMET-BART plain:
+    Eval perplexity:  11468.40690239118
+    lr: 0.000017, step: 1000, loss: 2.633574
+    Eval perplexity:  20893.139980762608
+    lr: 0.000015, step: 2000, loss: 2.167759
+    Eval perplexity:  110130.31652505911
+    lr: 0.000012, step: 3000, loss: 1.787407
+    Eval perplexity:  300898.27128823835
+    lr: 0.000009, step: 4000, loss: 1.491481
+    Eval perplexity:  1149326.933106448
+    lr: 0.000006, step: 5000, loss: 1.261684
+    Eval perplexity:  1602050.5018750026
+    lr: 0.000003, step: 6000, loss: 1.072305
+    Eval perplexity:  1944245.1525715312
+    lr: 0.000000, step: 7000, loss: 0.972159
+BART plain:
