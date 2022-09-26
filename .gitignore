@@ -142,4 +142,4 @@ outputs/
 submit_train.swb
 *.err
 *.out
-sbatch.slurm
+*.slurm

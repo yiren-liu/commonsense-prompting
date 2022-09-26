@@ -670,7 +670,7 @@ def generate(args):
         # gts.append(" ".join(tokens[1:]))
         # = max(tokenizer.encode(tokens[0]))
         chat_history = c_text
-        f = args.test_dataset.construct_conv_ESD(idx, chat_history, comet_row, comet_st_row, st_row, tokenizer, eos = True, pad=False, cls=False, strategy=False, generation=True, add_situ=False, sos=False)
+        f = args.test_dataset.construct_conv_ESD(idx, chat_history, comet_row, comet_st_row, st_row, tokenizer, eos = True, pad=False, cls=False, strategy=False, generation=True, add_situ=False)
         if len(f.input_ids) >= args.block_size:
             f.input_ids = f.input_ids[-args.block_size:]
             f.input_ids[0] = tokenizer.encode(tokenizer.cls_token)[0]

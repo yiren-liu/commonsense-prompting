@@ -8,11 +8,11 @@ from logging import getLogger
 from pathlib import Path
 from typing import Callable, Dict, Iterable, List
 
-import git
+# import git
 import numpy as np
 import torch
-from rouge_score import rouge_scorer, scoring
-from sacrebleu import corpus_bleu
+# from rouge_score import rouge_scorer, scoring
+# from sacrebleu import corpus_bleu
 from torch import nn
 from torch.utils.data import Dataset, Sampler
 

@@ -32,13 +32,18 @@ class Args():
         self.situation_train_comet_file = "trainComet_st.txt"
         self.situation_eval_comet_file = "devComet_st.txt"
         self.situation_test_comet_file = "testComet_st.txt"
+        # self.situation_train_file_name = "trainSituation.txt"
+        # self.situation_eval_file_name = "devSituation.txt"
+        # self.situation_test_file_name = "testSituation.txt"
         self.situation_train_file_name = "trainSituation.txt"
         self.situation_eval_file_name = "devSituation.txt"
         self.situation_test_file_name = "testSituation.txt"
 
         self.model_cache_dir = './cached/models/bart-comet2020/add_context_add_strategy'
+        # self.model_cache_dir = './cached/models/bart-comet2020/add_contextCOMET'
         # self.data_cache_dir = './cached/data/bart-comet2020/no_context_no_strategy'
-        self.data_cache_dir = './cached/data/bart-comet2020/add_context_add_strategy'
+        # self.data_cache_dir = './cached/data/bart-comet2020/add_context_add_strategy'
+        self.data_cache_dir = './cached/data/bart-comet2020/add_contextCOMET'
         self.block_size = 512
         self.do_train = True
         # self.do_train = False

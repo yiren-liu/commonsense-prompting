@@ -29,7 +29,8 @@ class Comet:
         self.tokenizer = AutoTokenizer.from_pretrained(model_path)
         task = "summarization"
         use_task_specific_params(self.model, task)
-        self.batch_size = 2
+        # self.batch_size = 2
+        self.batch_size = 20
         self.decoder_start_token_id = None
 
     def generate(
@@ -139,8 +140,6 @@ physical_relations = [
     "CapableOf",
     "CreatedBy",
     "DefinedAs",
-    "DesireOf",
-    "Desires",
     "HasA",
     "HasProperty",
     "InheritsFrom",
@@ -192,6 +191,8 @@ affective_relations = [
     "xWant",
     "oReact",
     "oWant",
+    "DesireOf",
+    "Desires",
 ]
 
 relDecodeConstraint = {
@@ -199,7 +200,8 @@ relDecodeConstraint = {
     1: event_relations,
     2: affective_relations,
 }
-USE_CONSTRAINT = False
+# USE_CONSTRAINT = False
+USE_CONSTRAINT = True
 
 
 if __name__ == "__main__":
@@ -212,7 +214,7 @@ if __name__ == "__main__":
     splits = ["train", "dev", "test"]
     searchDepth = 3
     for s in splits:
-        with open(f"data/dataset/sample_100/{s}Situation.txt", "r") as f:
+        with open(f"data/dataset/{s}Situation.txt", "r") as f:
             situations = []
             for line in f:
                 situations.append(line.strip())
@@ -254,6 +256,10 @@ if __name__ == "__main__":
             situations = [s + " " + "[" + t + "]" + r for s, t, r in zip(situations, bestTokens, results)]
 
         # write to file
-        with open(f"data/dataset/sample_100/{s}Comet_st_allRels.txt", "w") as f:
+        if USE_CONSTRAINT: 
+            ver = "relConstraint"
+        else:
+            ver = "relAll"
+        with open(f"data/dataset/{s}Comet_st_{ver}.txt", "w") as f:
             for s in situations:
                 f.write(s + "\n")
