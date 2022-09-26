@@ -227,14 +227,14 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
             
             # print(role_ids)
             # print(input_ids)
-            # for item in input_ids:
-            #     print(len(item))
-            #     print(tokenizer.decode(item))
-            # for item in decoder_labels:
-            #     print(len(item))
-            #     item[item==-100] = 1
-            #     print(tokenizer.decode(item))
-            # raise Exception("debug")
+            for item in input_ids[:1]:
+                print(len(item))
+                print(tokenizer.decode(item))
+            for item in decoder_labels[:1]:
+                print(len(item))
+                item[item==-100] = 1
+                print(tokenizer.decode(item))
+            raise Exception("debug")
 
             decoder_strategy_ids = decoder_strategy_ids[:, 0]
             decoder_strategy_ids = decoder_strategy_ids.to(args.device)

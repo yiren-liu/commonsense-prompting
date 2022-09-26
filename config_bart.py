@@ -32,19 +32,23 @@ class Args():
         self.situation_train_comet_file = "trainComet_st.txt"
         self.situation_eval_comet_file = "devComet_st.txt"
         self.situation_test_comet_file = "testComet_st.txt"
+        self.situation_train_file_name = "trainSituation.txt"
+        self.situation_eval_file_name = "devSituation.txt"
+        self.situation_test_file_name = "testSituation.txt"
+
 
         self.model_cache_dir = './cached/models/bart'
-        self.data_cache_dir = './cached/data/bart'
+        self.data_cache_dir = './cached/data/bart/add_context_add_strategy'
         self.block_size = 512
         self.do_train = True
         self.do_eval = False
         self.generation = False
         self.generate_and_eval = False
         self.evaluate_during_training = True
-        # self.per_gpu_train_batch_size = 6
-        # self.per_gpu_eval_batch_size = 12        
-        self.per_gpu_train_batch_size = 3
-        self.per_gpu_eval_batch_size = 6
+        self.per_gpu_train_batch_size = 20
+        self.per_gpu_eval_batch_size = 40        
+        # self.per_gpu_train_batch_size = 3
+        # self.per_gpu_eval_batch_size = 6
         self.gradient_accumulation_steps = 1
         self.learning_rate = 2e-5  # RAW 2
         self.weight_decay = 0
@@ -67,6 +71,9 @@ class Args():
         self.local_rank = -1
         self.fp16 = False
         self.fp16_opt_level = 'O1'
-        self.strategy = False
+        # self.strategy = False
+        self.strategy = True
+        # self.context = False
+        self.context = True
         self.turn = False
         self.role = False

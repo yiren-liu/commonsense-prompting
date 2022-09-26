@@ -189,6 +189,8 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
     set_seed(args)  # Added here for reproducibility
     import numpy as np
     np.set_printoptions(threshold=np.inf)
+
+    print_cnt = 0
     for epoch in train_iterator:
         # if epoch < 3:
         #     for paras in model.model.encoder.parameters():
@@ -223,16 +225,19 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
             input_ids, position_ids, turn_ids, role_ids, labels, cls_positions, cls_labels, strategy_ids, decoder_input_ids, decoder_position_ids, decoder_turn_ids, \
                 decoder_role_ids, decoder_labels, decoder_cls_positions, decoder_cls_labels, decoder_strategy_ids, comet_ids, comet_mask, emotion, comet_ids_st, comet_mask_st = batch
             
-            # print(role_ids)
-            # print(input_ids)
-            # for item in input_ids:
-            #     print(len(item))
-            #     print(tokenizer.decode(item))
-            # for item in decoder_labels:
-            #     print(len(item))
-            #     item[item==-100] = 1
-            #     print(tokenizer.decode(item))
-            # raise Exception("debug")
+
+            if print_cnt==0:
+                # print(role_ids)
+                # print(input_ids)
+                for item in input_ids[:1]:
+                    print(len(item))
+                    print(tokenizer.decode(item))
+                for item in decoder_labels[:1]:
+                    print(len(item))
+                    item[item==-100] = 1
+                    print(tokenizer.decode(item))
+                # raise Exception("debug")
+                print_cnt+=1
 
 
 
@@ -637,13 +642,12 @@ def generate(args):
 
     with open(args.data_path+"/"+args.test_file_name,"r") as f:
         chat_texts = f.read().split("\n")
-        # for line in f.readlines():
-        #     chat_texts.append(line)
     with open(args.data_path+"/"+ args.situation_test_comet_file, "r", encoding="utf-8") as f:
         comet_st = f.read().split("\n")
-
     with open(args.data_path+"/"+ args.test_comet_file, "r", encoding="utf-8") as f:
         comet = f.read().split("\n")
+    with open(args.data_path+"/" + args.situation_test_file_name, "r", encoding="utf-8") as f:
+        st_test = f.read().split("\n")
 
     assert len(comet) == len(chat_texts) == len(comet_st)
     gts = []
@@ -656,7 +660,7 @@ def generate(args):
     strategy_hits = []
     strategy_record = []
     strategy_hits_topk = [[] for _ in range(8)]
-    for idx, (c_text, comet_row, comet_st_row) in tqdm(enumerate(zip(chat_texts[:-1], comet[:-1], comet_st[:-1])), desc="Testing", total=len(chat_texts[:-1])):
+    for idx, (c_text, comet_row, comet_st_row, st_row) in tqdm(enumerate(zip(chat_texts[:-1], comet[:-1], comet_st[:-1], st_test[:-1])), desc="Testing", total=len(chat_texts[:-1])):
         if "EOS" not in c_text:
             continue
         # if idx>=100:
@@ -666,7 +670,7 @@ def generate(args):
         # gts.append(" ".join(tokens[1:]))
         # = max(tokenizer.encode(tokens[0]))
         chat_history = c_text
-        f = args.test_dataset.construct_conv_ESD(idx, chat_history, comet_row, comet_st_row, tokenizer, eos = True, pad=False, cls=False, strategy=False, generation=True)
+        f = args.test_dataset.construct_conv_ESD(idx, chat_history, comet_row, comet_st_row, st_row, tokenizer, eos = True, pad=False, cls=False, strategy=False, generation=True, add_situ=False, sos=False)
         if len(f.input_ids) >= args.block_size:
             f.input_ids = f.input_ids[-args.block_size:]
             f.input_ids[0] = tokenizer.encode(tokenizer.cls_token)[0]
@@ -726,7 +730,7 @@ def generate(args):
         chat_history_ids = model.generate(
             input_ids,
             **paras, max_length=100,min_length=5,num_beams=1,
-            pad_token_id=0,use_cache=True,
+            pad_token_id=tokenizer.pad_token_id,use_cache=True,
             eos_token_id=tokenizer.eos_token_id, temperature=0.7,
             top_p=0.3, top_k = 30, do_sample=True, repetition_penalty=1.03
         ) #top_p 0.9, topk 30
@@ -887,6 +891,8 @@ if __name__ == "__main__":
             st_comet_trn = f.read().split("\n")
         with open(args.data_path+"/" + args.train_file_name, "r", encoding="utf-8") as f:
             df_trn = f.read().split("\n")
+        with open(args.data_path+"/" + args.situation_train_file_name, "r", encoding="utf-8") as f:
+            st_trn = f.read().split("\n")
 
         with open(args.data_path+"/" + args.eval_comet_file, "r", encoding="utf-8") as f:
             comet_val = f.read().split("\n")
@@ -894,6 +900,8 @@ if __name__ == "__main__":
             st_comet_val = f.read().split("\n")
         with open(args.data_path+"/" + args.eval_file_name, "r", encoding="utf-8") as f:
             df_val = f.read().split("\n")
+        with open(args.data_path+"/" + args.situation_eval_file_name, "r", encoding="utf-8") as f:
+            st_val = f.read().split("\n")
 
         with open(args.data_path+"/" + args.test_comet_file, "r", encoding="utf-8") as f:
             comet_test = f.read().split("\n")
@@ -901,13 +909,15 @@ if __name__ == "__main__":
             st_comet_test = f.read().split("\n")
         with open(args.data_path+"/" + args.test_file_name, "r", encoding="utf-8") as f:
             df_test = f.read().split("\n")
+        with open(args.data_path+"/" + args.situation_test_file_name, "r", encoding="utf-8") as f:
+            st_test = f.read().split("\n")
 
         args.train_dataset = ESDDatasetBartCOMET2020(tokenizer, args, df_trn, comet_trn,
-                                        st_comet_trn, strategy=args.strategy, evaluate=False, test=False)
+                                        st_comet_trn, st_trn, strategy=args.strategy, evaluate=False, test=False, add_situ=args.context)
         args.eval_dataset = ESDDatasetBartCOMET2020(tokenizer, args, df_val, comet_val,
-                                       st_comet_val, evaluate=True, strategy=args.strategy, test=False)
+                                       st_comet_val, st_val, evaluate=True, strategy=args.strategy, test=False, add_situ=args.context)
         args.test_dataset = ESDDatasetBartCOMET2020(tokenizer, args, df_test, comet_test,
-                                       st_comet_test, evaluate=True, strategy=args.strategy, test=True)
+                                       st_comet_test, st_test, evaluate=True, strategy=args.strategy, test=True, add_situ=args.context)
 
         # # Training
         global_step, tr_loss = train(
@@ -931,8 +941,10 @@ if __name__ == "__main__":
         st_comet_test = f.read().split("\n")
     with open(args.data_path+"/" + args.test_file_name, "r", encoding="utf-8") as f:
         df_test = f.read().split("\n")
+    with open(args.data_path+"/" + args.situation_test_file_name, "r", encoding="utf-8") as f:
+        st_test = f.read().split("\n")
     args.test_dataset = ESDDatasetBartCOMET2020(tokenizer, args, df_test, comet_test,
-                                    st_comet_test, evaluate=True, strategy=args.strategy, test=True)
+                                    st_comet_test, st_test, evaluate=True, strategy=args.strategy, test=True, add_situ=args.context)
 
     generate(args)
 

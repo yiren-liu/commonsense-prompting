@@ -346,7 +346,7 @@ class ESDDatasetBlenderbot(Dataset):
 
 
 class ESDDatasetBartCOMET2020(Dataset):
-    def __init__(self, tokenizer: PreTrainedTokenizer, args, df, comet, comet_st, block_size=512, evaluate=False, strategy=True, test=False):
+    def __init__(self, tokenizer: PreTrainedTokenizer, args, df, comet, comet_st, st, block_size=512, evaluate=False, strategy=True, test=False, add_situ=True):
         block_size = block_size - (tokenizer.model_max_length - tokenizer.max_len_single_sentence)
         self.tokenizer = tokenizer
         self.strategyNull = self.tokenizer.encode('[None]', add_special_tokens=False)[0]
@@ -380,8 +380,8 @@ class ESDDatasetBartCOMET2020(Dataset):
             assert len(df) == len(comet) == len(comet_st)
             self.features = []
             print("loading data from files...")
-            for idx, (row, comet_row, comet_st_row) in enumerate(tqdm(zip(df[:-1], comet[:-1], comet_st[:-1]), total=len(df[:-1]))):
-                conv = self.construct_conv_ESD(idx, row, comet_row, comet_st_row, tokenizer, cls=False, strategy=strategy ,evaluate=evaluate)
+            for idx, (row, comet_row, comet_st_row, st_row) in enumerate(tqdm(zip(df[:-1], comet[:-1], comet_st[:-1], st[:-1]), total=len(df[:-1]))):
+                conv = self.construct_conv_ESD(idx, row, comet_row, comet_st_row, st_row, tokenizer, cls=False, strategy=strategy ,evaluate=evaluate, add_situ=add_situ)
                 if len(conv.input_ids) >= block_size:
                     conv.input_ids = conv.input_ids[-block_size:]
                     # conv.input_ids[0] = tokenizer.encode(tokenizer.cls_token)[0]
@@ -399,12 +399,13 @@ class ESDDatasetBartCOMET2020(Dataset):
             logger.info("Finished~")
     
     
-    def construct_conv_ESD(self, idx, row, comet_row, comet_st_row, tokenizer, eos = True, pad=True, cls=False, evaluate=False, strategy=True, generation=False):
+    def construct_conv_ESD(self, idx, row, comet_row, comet_st_row, st_row, tokenizer, eos = True, pad=True, cls=False, evaluate=False, strategy=True, generation=False, add_situ=True):
         #  process input text
-        inputs, roles, turns, strategy_labels, _ = self._get_inputs_from_text("EOS".join(row.split("EOS")[:-1]), tokenizer, strategy=strategy, add_gen=True)
+        # inputs, roles, turns, strategy_labels, _ = self._get_inputs_from_text("EOS".join(row.split("EOS")[:-1]), tokenizer, strategy=strategy, add_gen=True)
+        inputs, roles, turns, strategy_labels, _ = self._get_inputs_from_text("EOS".join(row.split("EOS")[:-1]), st_row, tokenizer, strategy=strategy, add_situ=add_situ)
         # process output (decoder input) text
-        d_inputs, d_roles, d_turns, d_strategy_labels, emotion = self._get_inputs_from_text(row.split("EOS")[-1], tokenizer, strategy=strategy)
-
+        d_inputs, d_roles, d_turns, d_strategy_labels, emotion = self._get_inputs_from_text(row.split("EOS")[-1], st_row, tokenizer, strategy=True, add_situ=False, sos=False)
+        
         
         # print("EOS".join(row.split("EOS")[:-1]))
         # print(row.split("EOS")[-1])
@@ -448,18 +449,19 @@ class ESDDatasetBartCOMET2020(Dataset):
         assert len(comet_mask) == max_num_attr
         return comet_ids, comet_mask
 
-    def _get_inputs_from_text(self, text, tokenizer, strategy=True, cls = False, add_gen=False):
+    def _get_inputs_from_text(self, text, st_row, tokenizer, strategy=False, cls = False, add_gen=False, add_situ=False, sos=True):
         srcs = text.strip()
         inputs = []
         roles = []
         turns = []
         strategy_labels=[]
-        
+
+        # adding tokens before encoding
         # srcs += " [GEN]"
         # srcs += " Response:"
         # if add_gen: srcs += " [GEN]"
         if add_gen: srcs += " Response:"
-
+        if add_situ: srcs = "0 0 0 Context:" + st_row.strip() + " EOS" + srcs
 
         srcs = srcs.split(" EOS")
         emotion = None
@@ -472,6 +474,7 @@ class ESDDatasetBartCOMET2020(Dataset):
                 emotion = src_emo
 
             context_id = tokenizer.encode(src)
+            if not sos: context_id = context_id[1:]
 
             if not strategy:
                 context_id = [i for i in context_id if i not in self.strategyIds]
