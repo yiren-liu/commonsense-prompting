@@ -93,7 +93,7 @@ def generate_dialogue_history_files(dataPath):
                     newLine = ""
                     for i in range(len(lines)):
                         tokens = lines[i].split(" ")
-                        if re.match(r"\[.*\]", tokens[3]):
+                        if re.findall(r"\[.*\]", tokens[3]):
                             role = "PersonY"
                             text = " ".join(tokens[4:])
                         else:
@@ -247,11 +247,11 @@ if __name__ == "__main__":
     # load datasets
     splits = ["train", "dev", "test"]
     searchDepth = 3
-    if USE_DIALOGUE_HISTORY:
-        dataName = "DialogueHistory"
-    else:    
-        dataName = "Situation"
     for s in splits:
+        if USE_DIALOGUE_HISTORY:
+            dataName = "DialogueHistory"
+        else:    
+            dataName = "Situation"
         with open(f"{dataPath}/{s}{dataName}.txt", "r") as f:
             situations = []
             for line in f:
