@@ -102,7 +102,6 @@ def generate_dialogue_history_files(dataPath):
                         newLine += f"{role}: {text} EOS "
                     fw.write(newLine.strip() + '\n')
 
-    raise NotImplementedError
 
 
 all_relations = [
@@ -224,8 +223,8 @@ relDecodeConstraint = {
     1: event_relations,
     2: affective_relations,
 }
-# USE_CONSTRAINT = False
-USE_CONSTRAINT = True
+USE_CONSTRAINT = False
+# USE_CONSTRAINT = True
 USE_DIALOGUE_HISTORY = True
 
 if __name__ == "__main__":
@@ -233,9 +232,9 @@ if __name__ == "__main__":
     if USE_DIALOGUE_HISTORY:
         # check if the data file exists
         if not (
-            os.path.exists(f"{dataPath}/trainDialogueHistory.tsv")
-            and os.path.exists(f"{dataPath}/devDialogueHistory.tsv")
-            and os.path.exists(f"{dataPath}/testDialogueHistory.tsv")
+            os.path.exists(f"{dataPath}/trainDialogueHistory.txt")
+            and os.path.exists(f"{dataPath}/devDialogueHistory.txt")
+            and os.path.exists(f"{dataPath}/testDialogueHistory.txt")
         ):
             print("dialogue distory file not found, generating...")
             generate_dialogue_history_files(dataPath)
@@ -295,6 +294,10 @@ if __name__ == "__main__":
             ver = "relConstraint"
         else:
             ver = "relAll"
-        with open(f"{dataPath}/{s}Comet_st_{ver}.txt", "w") as f:
+        if USE_DIALOGUE_HISTORY:
+            dataName = "dialog"
+        else:    
+            dataName = "st"
+        with open(f"{dataPath}/{s}Comet_{dataName}_{ver}.txt", "w") as f:
             for s in situations:
                 f.write(s + "\n")
