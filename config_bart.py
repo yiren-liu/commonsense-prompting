@@ -2,7 +2,7 @@ import os
 
 class Args():
     def __init__(self):
-        TAG = 'relConstraint'
+        TAG = 'relConstraint_base'
         # TAG = 'all_data'
         # TAG = 'sample_0.2'
         # TAG = 'sample_100'
@@ -16,9 +16,12 @@ class Args():
         self.generation_dir = os.path.join('outputs', 'bart_generated', TAG)
         self.model_type = 'mymodel'
      #    self.model_name_or_path = './blender-small'
-        self.model_name_or_path = "facebook/bart-large"
-        self.config_name = "facebook/bart-large"
-        self.tokenizer_name = "facebook/bart-large"
+        # self.model_name_or_path = "facebook/bart-large"
+        # self.config_name = "facebook/bart-large"
+        # self.tokenizer_name = "facebook/bart-large"
+        self.model_name_or_path = "facebook/bart-base"
+        self.config_name = "facebook/bart-base"
+        self.tokenizer_name = "facebook/bart-base"
 
         self.data_path = "./data/dataset"
         # self.data_path = "./data/dataset/sample_100"
@@ -44,7 +47,7 @@ class Args():
         self.situation_test_file_name = "testComet_st_relConstraint.txt"
 
 
-        self.model_cache_dir = './cached/models/bart'
+        self.model_cache_dir = './cached/models/bart/base'
         # self.data_cache_dir = './cached/data/bart/add_context_add_strategy'
         # self.data_cache_dir = './cached/data/bart/add_contextCOMET'
         self.data_cache_dir = './cached/data/bart/add_contextCOMET_relConstraint'
