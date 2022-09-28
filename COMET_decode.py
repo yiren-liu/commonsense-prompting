@@ -202,12 +202,22 @@ relDecodeConstraint = {
 }
 # USE_CONSTRAINT = False
 USE_CONSTRAINT = True
-
+USE_DIALOGUE_HISTORY = True
 
 if __name__ == "__main__":
     comet = Comet("ref/comet-atomic-2020/models/comet_atomic2020_bart/comet-atomic_2020_BART")
     comet.model.zero_grad()
     print("model loaded")
+
+    if USE_DIALOGUE_HISTORY:
+        # check if the data file exists
+        if not (
+            os.path.exists("data/dataset/trainWithStrategy_short.tsv")
+            and os.path.exists("data/dataset/devWithStrategy_short.tsv")
+            and os.path.exists("data/dataset/testWithStrategy_short.tsv")
+        ):
+            print("dialogue distory file not found, generating...")
+            
 
 
     # load datasets
