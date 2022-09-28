@@ -1,3 +1,4 @@
+import re
 import json
 import os 
 import torch
@@ -80,6 +81,29 @@ class Comet:
                 token_probs = torch.softmax(logits[:, 0, token_ids].squeeze(), dim=-1)
                 probs.append(token_probs.tolist())
         return probs
+
+def generate_dialogue_history_files(dataPath):
+    splits = ["train", "dev", "test"]
+    for split in splits:
+        with open(dataPath + f"/{split}DialogueHistory.txt", "w", encoding="utf8") as fw:
+            with open(dataPath + f"/{split}WithStrategy_short.tsv", "r", encoding="utf8") as fr:
+                # 3 0 0 Hi there, can you help me?  EOS 3 1 1 [Question] I'll do my best. What do you need help with?  EOS 3 0 2 I feel depressed because I had to quit my job and stay home with my kids because of their remote school.  EOS 3 1 3 [Reflection of feelings] I can understand why that would make you feel depressed.  EOS 3 0 4 Do you have any advice on how to feel better?  EOS 3 1 5 [Providing Suggestions] Yes of course. It's good that you are acknowledging your feelings. To improve your mood you could practice hobbies or other things you enjoy doing. 
+                for line in fr:
+                    lines = line.strip().split(" EOS ")
+                    newLine = ""
+                    for i in range(len(lines)):
+                        tokens = lines[i].split(" ")
+                        if re.match(r"\[.*\]", tokens[3]):
+                            role = "PersonY"
+                            text = " ".join(tokens[4:])
+                        else:
+                            role = "PersonX"
+                            text = " ".join(tokens[3:])
+                        newLine += f"{role}: {text} EOS "
+                    fw.write(newLine.strip() + '\n')
+
+    raise NotImplementedError
+
 
 all_relations = [
     "AtLocation",
@@ -205,26 +229,27 @@ USE_CONSTRAINT = True
 USE_DIALOGUE_HISTORY = True
 
 if __name__ == "__main__":
-    comet = Comet("ref/comet-atomic-2020/models/comet_atomic2020_bart/comet-atomic_2020_BART")
-    comet.model.zero_grad()
-    print("model loaded")
-
+    dataPath = "data/dataset"
     if USE_DIALOGUE_HISTORY:
         # check if the data file exists
         if not (
-            os.path.exists("data/dataset/trainWithStrategy_short.tsv")
-            and os.path.exists("data/dataset/devWithStrategy_short.tsv")
-            and os.path.exists("data/dataset/testWithStrategy_short.tsv")
+            os.path.exists(f"{dataPath}/trainDialogueHistory.tsv")
+            and os.path.exists(f"{dataPath}/devDialogueHistory.tsv")
+            and os.path.exists(f"{dataPath}/testDialogueHistory.tsv")
         ):
             print("dialogue distory file not found, generating...")
-            
+            generate_dialogue_history_files(dataPath)
 
+
+    comet = Comet("ref/comet-atomic-2020/models/comet_atomic2020_bart/comet-atomic_2020_BART")
+    comet.model.zero_grad()
+    print("model loaded")        
 
     # load datasets
     splits = ["train", "dev", "test"]
     searchDepth = 3
     for s in splits:
-        with open(f"data/dataset/{s}Situation.txt", "r") as f:
+        with open(f"{dataPath}/{s}Situation.txt", "r") as f:
             situations = []
             for line in f:
                 situations.append(line.strip())
@@ -270,6 +295,6 @@ if __name__ == "__main__":
             ver = "relConstraint"
         else:
             ver = "relAll"
-        with open(f"data/dataset/{s}Comet_st_{ver}.txt", "w") as f:
+        with open(f"{dataPath}/{s}Comet_st_{ver}.txt", "w") as f:
             for s in situations:
                 f.write(s + "\n")
