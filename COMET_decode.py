@@ -247,8 +247,12 @@ if __name__ == "__main__":
     # load datasets
     splits = ["train", "dev", "test"]
     searchDepth = 3
+    if USE_DIALOGUE_HISTORY:
+        dataName = "DialogueHistory"
+    else:    
+        dataName = "Situation"
     for s in splits:
-        with open(f"{dataPath}/{s}Situation.txt", "r") as f:
+        with open(f"{dataPath}/{s}{dataName}.txt", "r") as f:
             situations = []
             for line in f:
                 situations.append(line.strip())
