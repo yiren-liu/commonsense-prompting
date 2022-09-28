@@ -93,7 +93,7 @@ def generate_dialogue_history_files(dataPath):
                     newLine = ""
                     for i in range(len(lines)):
                         tokens = lines[i].split(" ")
-                        if re.findall(r"\[.*\]", tokens[3]):
+                        if re.match(r"\[.*", tokens[3]):
                             role = "PersonY"
                             text = " ".join(tokens[4:])
                         else:
