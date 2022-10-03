@@ -228,6 +228,7 @@ relDecodeConstraint = {
 USE_CONSTRAINT = False
 # USE_CONSTRAINT = True
 USE_DIALOGUE_HISTORY = True
+USE_LAST_UTTERANCE = True
 
 if __name__ == "__main__":
     dataPath = "data/dataset"
@@ -254,9 +255,16 @@ if __name__ == "__main__":
             dataName = "DialogueHistory"
         else:    
             dataName = "Situation"
-        with open(f"{dataPath}/{s}{dataName}.txt", "r") as f:
+        with open(f"{dataPath}/{s}{dataName}.txt", "r", encoding='utf8') as f:
             situations = []
             for line in f:
+                if USE_DIALOGUE_HISTORY and USE_LAST_UTTERANCE:
+                    # situations.append(line.strip().split(" EOS ")[-2])
+                    situations.append(
+                        "PersonX" + line.split("PersonX")[-1].split("PersonY")[0].strip().rstrip(" EOS")
+                    )
+                    continue
+                    # raise NotImplementedError
                 situations.append(line.strip())
         print(f"Loaded {len(situations)} examples from {s} split")
 
@@ -302,6 +310,8 @@ if __name__ == "__main__":
             ver = "relAll"
         if USE_DIALOGUE_HISTORY:
             dataName = "dialog"
+            if USE_LAST_UTTERANCE:
+                dataName += "Last"
         else:    
             dataName = "st"
         with open(f"{dataPath}/{s}Comet_{dataName}_{ver}.txt", "w") as f:
