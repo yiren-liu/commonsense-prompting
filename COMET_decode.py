@@ -229,8 +229,12 @@ relDecodeConstraint = {
 # configs 
 USE_CONSTRAINT = False
 # USE_CONSTRAINT = True
+
+USE_CONSTRAINT = True
 USE_DIALOGUE_HISTORY = True
-USE_LAST_UTTERANCE = True
+
+# USE_LAST_UTTERANCE = True
+USE_LAST_UTTERANCE = False
 
 AVOID_REPETITION = True # when decoding, avoid repeating the same entailment
 
