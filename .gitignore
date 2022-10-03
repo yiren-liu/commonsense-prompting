@@ -143,3 +143,4 @@ submit_train.swb
 *.err
 *.out
 *.slurm
+.vscode/

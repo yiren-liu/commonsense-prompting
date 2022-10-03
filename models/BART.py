@@ -2,11 +2,13 @@ import torch
 
 from transformers import (
     AutoModelForSeq2SeqLM, 
-    AutoTokenizer
+    AutoTokenizer,
+    BartForConditionalGeneration,
+    BartTokenizer,
 )
 
 def getBartTokenizerATOMIC2020(args):
-    tokenizer = AutoTokenizer.from_pretrained(
+    tokenizer = BartTokenizer.from_pretrained(
         args.model_name_or_path, cache_dir=args.model_cache_dir)
     # add special tokens cls_token 
     tokenizer.add_special_tokens({'cls_token': '<s>'})
@@ -19,7 +21,7 @@ def getBartTokenizerATOMIC2020(args):
     return tokenizer
 
 
-class BartATOMIC2020(AutoModelForSeq2SeqLM):
+class BartATOMIC2020(BartForConditionalGeneration):
     def __init__(self, config):
         super().__init__(config)
         pass

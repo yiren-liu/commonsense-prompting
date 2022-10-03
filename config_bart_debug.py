@@ -2,10 +2,10 @@ import os
 
 class Args():
     def __init__(self):
-        # TAG = 'debug'
+        TAG = 'debug'
         # TAG = 'relConstraint'
         # TAG = 'relConstraint_base'
-        TAG = 'all_data'
+        # TAG = 'all_data'
         # TAG = 'sample_0.2'
         # TAG = 'sample_100'
         # TAG = 'all_loss'
@@ -18,16 +18,16 @@ class Args():
         self.generation_dir = os.path.join('outputs', 'bart_generated', TAG)
         self.model_type = 'mymodel'
      #    self.model_name_or_path = './blender-small'
-        self.model_name_or_path = "facebook/bart-large"
-        self.config_name = "facebook/bart-large"
-        self.tokenizer_name = "facebook/bart-large"
-        # self.model_name_or_path = "facebook/bart-base"
-        # self.config_name = "facebook/bart-base"
-        # self.tokenizer_name = "facebook/bart-base"
+        # self.model_name_or_path = "facebook/bart-large"
+        # self.config_name = "facebook/bart-large"
+        # self.tokenizer_name = "facebook/bart-large"
+        self.model_name_or_path = "facebook/bart-base"
+        self.config_name = "facebook/bart-base"
+        self.tokenizer_name = "facebook/bart-base"
 
-        self.data_path = "./data/dataset"
+        # self.data_path = "./data/dataset"
         # self.data_path = "./data/dataset/sample_100"
-        # self.data_path = "./data/dataset/sample_0.2"
+        self.data_path = "./data/dataset/sample_0.2"
 
         self.train_file_name = "trainWithStrategy_short.tsv"
         self.eval_file_name = "devWithStrategy_short.tsv"
@@ -49,24 +49,22 @@ class Args():
         # self.situation_test_file_name = "testComet_st_relConstraint.txt"
 
 
-        # self.model_cache_dir = './cached/models/bart/debug'
-        self.model_cache_dir = './cached/models/bart/large'
+        self.model_cache_dir = './cached/models/bart/debug'
+        # self.model_cache_dir = './cached/models/bart/base'
         # self.data_cache_dir = './cached/data/bart/add_context_add_strategy'
         # self.data_cache_dir = './cached/data/bart/add_contextCOMET'
         # self.data_cache_dir = './cached/data/bart/add_contextCOMET_relConstraint'
-        # self.data_cache_dir = './cached/data/bart/debug_0.2'
+        self.data_cache_dir = './cached/data/bart/debug_0.2'
         self.block_size = 512
         self.do_train = True
         self.do_eval = False
         self.generation = False
         self.generate_and_eval = False
         self.evaluate_during_training = True
-        self.per_gpu_train_batch_size = 20
-        self.per_gpu_eval_batch_size = 40    
-            
-        # self.per_gpu_train_batch_size = 1
-        # self.per_gpu_eval_batch_size = 1
-
+        # self.per_gpu_train_batch_size = 20
+        # self.per_gpu_eval_batch_size = 40        
+        self.per_gpu_train_batch_size = 1
+        self.per_gpu_eval_batch_size = 1
         self.gradient_accumulation_steps = 1
         self.learning_rate = 2e-5  # RAW 2
         self.weight_decay = 0
