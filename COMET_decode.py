@@ -56,10 +56,10 @@ class Comet:
                     decoder_start_token_id=self.decoder_start_token_id,
                     num_beams=num_generate,
                     num_return_sequences=num_generate,
-                    )
+                )
 
                 dec = self.tokenizer.batch_decode(summaries, skip_special_tokens=True, clean_up_tokenization_spaces=False)
-                decs.append(dec)
+                decs.append(np.array(dec).reshape([-1, num_generate]))
 
             return decs
     
@@ -230,6 +230,10 @@ USE_CONSTRAINT = False
 USE_DIALOGUE_HISTORY = True
 USE_LAST_UTTERANCE = True
 
+# TODO: add dialogue summarization
+
+
+
 if __name__ == "__main__":
     dataPath = "data/dataset"
     if USE_DIALOGUE_HISTORY:
@@ -297,8 +301,20 @@ if __name__ == "__main__":
             # generate with the top token and add to the situation
             queries = [s + " " + t + " [GEN]" for s, t in zip(situations, bestTokens)]
             print("generating...")
-            results = comet.generate(queries, num_generate=1)
-            results = [t for l in results for t in l]
+            results = comet.generate(queries, num_generate=3)
+            # avoid generated none
+
+            # results = [t for l in results for t in l]
+            # results = [t for l in results for topk in l for t in topk if "none" not in t]
+            temp = []
+            for l in results:
+                for topk in l:
+                    for t in topk:
+                        if "none" not in t:
+                            temp.append(t)
+                            break
+            results = temp
+            
 
             # append the top token and then generated text to the situation
             situations = [s + " " + "[" + t + "]" + r for s, t, r in zip(situations, bestTokens, results)]
