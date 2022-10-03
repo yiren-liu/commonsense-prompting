@@ -30,8 +30,8 @@ class Comet:
         self.tokenizer = AutoTokenizer.from_pretrained(model_path)
         task = "summarization"
         use_task_specific_params(self.model, task)
-        # self.batch_size = 2
-        self.batch_size = 20
+        self.batch_size = 2
+        # self.batch_size = 20
         self.decoder_start_token_id = None
 
     def generate(
@@ -78,7 +78,7 @@ class Comet:
                 logits = outputs.logits
                 # probs = torch.softmax(logits, dim=-1)
                 token_ids = self.tokenizer(tokens, add_special_tokens=False, return_tensors="pt").input_ids
-                token_probs = torch.softmax(logits[:, 0, token_ids].squeeze(), dim=-1)
+                token_probs = torch.softmax(logits[:, 0, token_ids].squeeze(dim=-1), dim=-1)
                 probs.append(token_probs.tolist())
         return probs
 
@@ -230,7 +230,6 @@ relDecodeConstraint = {
 USE_CONSTRAINT = False
 # USE_CONSTRAINT = True
 
-USE_CONSTRAINT = True
 USE_DIALOGUE_HISTORY = True
 
 # USE_LAST_UTTERANCE = True
@@ -238,6 +237,7 @@ USE_LAST_UTTERANCE = False
 
 AVOID_REPETITION = True # when decoding, avoid repeating the same entailment
 
+DEBUG = False
 
 # TODO: add dialogue summarization
 
@@ -270,7 +270,9 @@ if __name__ == "__main__":
             dataName = "Situation"
         with open(f"{dataPath}/{s}{dataName}.txt", "r", encoding='utf8') as f:
             situations = []
+            cnt = 0
             for line in f:
+                if DEBUG and cnt > 100: break
                 if USE_DIALOGUE_HISTORY and USE_LAST_UTTERANCE:
                     # situations.append(line.strip().split(" EOS ")[-2])
                     situations.append(
@@ -279,6 +281,7 @@ if __name__ == "__main__":
                     continue
                     # raise NotImplementedError
                 situations.append(line.strip())
+                cnt += 1
         print(f"Loaded {len(situations)} examples from {s} split")
 
         bestTokens = []
@@ -316,11 +319,13 @@ if __name__ == "__main__":
             # results = [t for l in results for t in l]
             # results = [t for l in results for topk in l for t in topk if "none" not in t]
             temp = []
-            for l in results:
-                for topk in l:
+            situIdx = 0
+            for batch in results:
+                for topk in batch:
                     for t in topk:
-                        if "none" not in t:
+                        if "none" not in t and (not AVOID_REPETITION or t not in situations[situIdx]):
                             temp.append(t)
+                            situIdx += 1
                             break
             results = temp
             
@@ -339,6 +344,6 @@ if __name__ == "__main__":
                 dataName += "Last"
         else:    
             dataName = "st"
-        with open(f"{dataPath}/{s}Comet_{dataName}_{ver}.txt", "w") as f:
+        with open(f"{dataPath}/{s}Comet_{dataName}_{ver}.txt", "w", encoding='utf8') as f:
             for s in situations:
                 f.write(s + "\n")
