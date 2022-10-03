@@ -42,8 +42,8 @@ class Args():
         self.model_cache_dir = './cached/models/bart-comet2020/add_context_add_strategy'
         # self.model_cache_dir = './cached/models/bart-comet2020/add_contextCOMET'
         # self.data_cache_dir = './cached/data/bart-comet2020/no_context_no_strategy'
-        # self.data_cache_dir = './cached/data/bart-comet2020/add_context_add_strategy'
-        self.data_cache_dir = './cached/data/bart-comet2020/add_contextCOMET'
+        self.data_cache_dir = './cached/data/bart-comet2020/add_context_add_strategy'
+        # self.data_cache_dir = './cached/data/bart-comet2020/add_contextCOMET'
         self.block_size = 512
         self.do_train = True
         # self.do_train = False

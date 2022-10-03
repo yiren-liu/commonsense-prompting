@@ -225,10 +225,11 @@ relDecodeConstraint = {
     1: event_relations,
     2: affective_relations,
 }
-USE_CONSTRAINT = False
-# USE_CONSTRAINT = True
+# USE_CONSTRAINT = False
+USE_CONSTRAINT = True
 USE_DIALOGUE_HISTORY = True
-USE_LAST_UTTERANCE = True
+# USE_LAST_UTTERANCE = True
+USE_LAST_UTTERANCE = False
 
 # TODO: add dialogue summarization
 

@@ -51,7 +51,7 @@ class Args():
 
         # self.model_cache_dir = './cached/models/bart/debug'
         self.model_cache_dir = './cached/models/bart/large'
-        # self.data_cache_dir = './cached/data/bart/add_context_add_strategy'
+        self.data_cache_dir = './cached/data/bart/add_context_add_strategy'
         # self.data_cache_dir = './cached/data/bart/add_contextCOMET'
         # self.data_cache_dir = './cached/data/bart/add_contextCOMET_relConstraint'
         # self.data_cache_dir = './cached/data/bart/debug_0.2'
