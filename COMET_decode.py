@@ -30,8 +30,8 @@ class Comet:
         self.tokenizer = AutoTokenizer.from_pretrained(model_path)
         task = "summarization"
         use_task_specific_params(self.model, task)
-        self.batch_size = 2
-        # self.batch_size = 20
+        # self.batch_size = 2
+        self.batch_size = 20
         self.decoder_start_token_id = None
 
     def generate(
@@ -227,13 +227,13 @@ relDecodeConstraint = {
 }
 
 # configs 
-USE_CONSTRAINT = False
-# USE_CONSTRAINT = True
+# USE_CONSTRAINT = False
+USE_CONSTRAINT = True
 
 USE_DIALOGUE_HISTORY = True
 
-# USE_LAST_UTTERANCE = True
-USE_LAST_UTTERANCE = False
+USE_LAST_UTTERANCE = True
+# USE_LAST_UTTERANCE = False
 
 AVOID_REPETITION = True # when decoding, avoid repeating the same entailment
 
