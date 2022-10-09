@@ -254,8 +254,8 @@ if COMET_REL_ONLY:
     event_relations = list(set(event_relations) & set(comet_only_relations))
     affective_relations = list(set(affective_relations) & set(comet_only_relations))
 
-# DEBUG = False
-DEBUG = True
+DEBUG = False
+# DEBUG = True
 
 # TODO: add dialogue summarization
 

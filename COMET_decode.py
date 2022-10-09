@@ -244,7 +244,8 @@ USE_LAST_UTTERANCE = False
 
 AVOID_REPETITION = True # when decoding, avoid repeating the same entailment
 
-DECODE_ALL = True # decode all relations independently, and dump to json
+# DECODE_ALL = True # decode all relations independently, and dump to json
+DECODE_ALL = False
 
 COMET_REL_ONLY = True # only decode relations in comet_only_relations
 if COMET_REL_ONLY: 
@@ -414,6 +415,7 @@ if __name__ == "__main__":
                 relSet = "CometOnly"
             else:
                 relSet = "All"
+            print(f"Writing results to {dataPath}/{s}Comet_{dataName}_{ver}_{relSet}.txt")
             with open(f"{dataPath}/{s}Comet_{dataName}_{ver}_{relSet}.txt", "w", encoding='utf8') as f:
                 for s in situations:
                     f.write(s + "\n")
