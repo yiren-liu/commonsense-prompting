@@ -105,6 +105,18 @@ def generate_dialogue_history_files(dataPath):
                     fw.write(newLine.strip() + '\n')
 
 
+comet_only_relations = [
+    "oEffect",
+    "oReact",
+    "oWant",
+    "xAttr",
+    "xEffect",
+    "xIntent",
+    "xNeed",
+    "xReact",
+    "xReason",
+    "xWant",
+]
 
 all_relations = [
     "AtLocation",
@@ -237,6 +249,8 @@ USE_LAST_UTTERANCE = True
 
 AVOID_REPETITION = True # when decoding, avoid repeating the same entailment
 
+DECODE_ALL = True # decode all relations independently, and dump to json
+
 DEBUG = False
 
 # TODO: add dialogue summarization
@@ -284,66 +298,100 @@ if __name__ == "__main__":
                 cnt += 1
         print(f"Loaded {len(situations)} examples from {s} split")
 
-        bestTokens = []
-        tokenHistory = [] # for memorizing the token history, to avoid repetition
-        for i in range(searchDepth):
-            print(f"search depth {i + 1}: ")
-            if USE_CONSTRAINT:
-                tokens = relDecodeConstraint[i]
-            else:
-                tokens = all_relations
-            print("finding optimal tokens...")
-            probs = comet.get_token_probs(situations, tokens)
-            probs = [p for l in probs for p in l]
-            topTokens = np.array(tokens)[np.argsort(probs, axis=1)[:, -3:][:, ::-1]]
-            # topTokens = np.array(tokens)[np.argmax(probs, axis=1)]
-            if len(tokenHistory) == 0: tokenHistory = [[] for _ in range(len(topTokens))]
-            # avoid adding the tokens that have been used before
-            # if a token has been seem, use the second best token, then third
-            bestTokens = ["xIntent"]*len(topTokens)
-            for j in range(len(topTokens)):
-                for k in range(len(topTokens[j])):
-                    if topTokens[j][k] not in tokenHistory[j]:
-                        bestTokens[j] = topTokens[j][k]
-                        break
-
-            for j in range(len(bestTokens)):
-                tokenHistory[j].append(bestTokens[j])
-
-            # generate with the top token and add to the situation
-            queries = [s + " " + t + " [GEN]" for s, t in zip(situations, bestTokens)]
+        if DECODE_ALL:
+            # geberate using all relations independently
+            queries = []
+            situRel = [] # [(s, r), ...]
+            for s in situations:
+                for r in comet_only_relations:
+                    queries.append(s + " " + r + " [GEN]")
+                    situRel.append((s, r))
+            # generation with comet model
             print("generating...")
-            results = comet.generate(queries, num_generate=3)
-            # avoid generated none
+            results = comet.generate(queries, num_generate=5)
 
-            # results = [t for l in results for t in l]
-            # results = [t for l in results for topk in l for t in topk if "none" not in t]
-            temp = []
+            # unpack the results
+            temp = {}
             situIdx = 0
             for batch in results:
                 for topk in batch:
-                    for t in topk:
-                        if "none" not in t and (not AVOID_REPETITION or t not in situations[situIdx]):
-                            temp.append(t)
-                            situIdx += 1
-                            break
+                    s, r = situRel[situIdx]
+                    if s not in temp:
+                        temp[s] = {}
+                    temp[s][r] = topk
             results = temp
-            
 
-            # append the top token and then generated text to the situation
-            situations = [s + " " + "[" + t + "]" + r for s, t, r in zip(situations, bestTokens, results)]
-
-        # write to file
-        if USE_CONSTRAINT: 
-            ver = "relConstraint"
+            # convert and dump to jsonl
+            with open(f"{dataPath}/{s}CometOnly_{dataName}_ind.jsonl", "w", encoding='utf8') as f:
+                for s in results:
+                    for r in results[s]:
+                        f.write(
+                            json.dumps({
+                            "situation": s,
+                            "relation": r,
+                            "entailments": results[s][r],
+                        }) + "\n")
         else:
-            ver = "relAll"
-        if USE_DIALOGUE_HISTORY:
-            dataName = "dialog"
-            if USE_LAST_UTTERANCE:
-                dataName += "Last"
-        else:    
-            dataName = "st"
-        with open(f"{dataPath}/{s}Comet_{dataName}_{ver}.txt", "w", encoding='utf8') as f:
-            for s in situations:
-                f.write(s + "\n")
+            bestTokens = []
+            tokenHistory = [] # for memorizing the token history, to avoid repetition
+            for i in range(searchDepth):
+                print(f"search depth {i + 1}: ")
+                if USE_CONSTRAINT:
+                    tokens = relDecodeConstraint[i]
+                else:
+                    tokens = all_relations
+                print("finding optimal tokens...")
+                probs = comet.get_token_probs(situations, tokens)
+                probs = [p for l in probs for p in l]
+                topTokens = np.array(tokens)[np.argsort(probs, axis=1)[:, -3:][:, ::-1]]
+                # topTokens = np.array(tokens)[np.argmax(probs, axis=1)]
+                if len(tokenHistory) == 0: tokenHistory = [[] for _ in range(len(topTokens))]
+                # avoid adding the tokens that have been used before
+                # if a token has been seem, use the second best token, then third
+                bestTokens = ["xIntent"]*len(topTokens)
+                for j in range(len(topTokens)):
+                    for k in range(len(topTokens[j])):
+                        if topTokens[j][k] not in tokenHistory[j]:
+                            bestTokens[j] = topTokens[j][k]
+                            break
+
+                for j in range(len(bestTokens)):
+                    tokenHistory[j].append(bestTokens[j])
+
+                # generate with the top token and add to the situation
+                queries = [s + " " + t + " [GEN]" for s, t in zip(situations, bestTokens)]
+                print("generating...")
+                results = comet.generate(queries, num_generate=3)
+                # avoid generated none
+
+                # results = [t for l in results for t in l]
+                # results = [t for l in results for topk in l for t in topk if "none" not in t]
+                temp = []
+                situIdx = 0
+                for batch in results:
+                    for topk in batch:
+                        for t in topk:
+                            if "none" not in t and (not AVOID_REPETITION or t not in situations[situIdx]):
+                                temp.append(t)
+                                situIdx += 1
+                                break
+                results = temp
+                
+
+                # append the top token and then generated text to the situation
+                situations = [s + " " + "[" + t + "]" + r for s, t, r in zip(situations, bestTokens, results)]
+
+            # write to file
+            if USE_CONSTRAINT: 
+                ver = "relConstraint"
+            else:
+                ver = "relAll"
+            if USE_DIALOGUE_HISTORY:
+                dataName = "dialog"
+                if USE_LAST_UTTERANCE:
+                    dataName += "Last"
+            else:    
+                dataName = "st"
+            with open(f"{dataPath}/{s}Comet_{dataName}_{ver}.txt", "w", encoding='utf8') as f:
+                for s in situations:
+                    f.write(s + "\n")
