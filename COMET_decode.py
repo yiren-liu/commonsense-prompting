@@ -32,6 +32,7 @@ class Comet:
         use_task_specific_params(self.model, task)
         # self.batch_size = 2
         self.batch_size = 20
+        if DEBUG: self.batch_size = 2
         self.decoder_start_token_id = None
 
     def generate(
@@ -244,14 +245,15 @@ USE_CONSTRAINT = True
 
 USE_DIALOGUE_HISTORY = True
 
-USE_LAST_UTTERANCE = True
-# USE_LAST_UTTERANCE = False
+# USE_LAST_UTTERANCE = True
+USE_LAST_UTTERANCE = False
 
 AVOID_REPETITION = True # when decoding, avoid repeating the same entailment
 
 DECODE_ALL = True # decode all relations independently, and dump to json
 
 DEBUG = False
+# DEBUG = True
 
 # TODO: add dialogue summarization
 
@@ -286,9 +288,10 @@ if __name__ == "__main__":
             situations = []
             cnt = 0
             for line in f:
-                if DEBUG and cnt > 100: break
+                if DEBUG and cnt > 20: break
                 if USE_DIALOGUE_HISTORY and USE_LAST_UTTERANCE:
                     # situations.append(line.strip().split(" EOS ")[-2])
+                    dataName = "DialogueHistoryLast"
                     situations.append(
                         "PersonX" + line.split("PersonX")[-1].split("PersonY")[0].strip().rstrip(" EOS")
                     )
@@ -302,10 +305,10 @@ if __name__ == "__main__":
             # geberate using all relations independently
             queries = []
             situRel = [] # [(s, r), ...]
-            for s in situations:
+            for situ in situations:
                 for r in comet_only_relations:
-                    queries.append(s + " " + r + " [GEN]")
-                    situRel.append((s, r))
+                    queries.append(situ + " " + r + " [GEN]")
+                    situRel.append((situ, r))
             # generation with comet model
             print("generating...")
             results = comet.generate(queries, num_generate=5)
@@ -315,10 +318,11 @@ if __name__ == "__main__":
             situIdx = 0
             for batch in results:
                 for topk in batch:
-                    s, r = situRel[situIdx]
-                    if s not in temp:
-                        temp[s] = {}
-                    temp[s][r] = topk
+                    situ, r = situRel[situIdx]
+                    if situ not in temp:
+                        temp[situ] = {}
+                    temp[situ][r] = topk
+                    situIdx += 1
             results = temp
 
             # convert and dump to jsonl
@@ -328,8 +332,7 @@ if __name__ == "__main__":
                         f.write(
                             json.dumps({
                             "situation": s,
-                            "relation": r,
-                            "entailments": results[s][r],
+                            r: results[s][r].tolist(),
                         }) + "\n")
         else:
             bestTokens = []
