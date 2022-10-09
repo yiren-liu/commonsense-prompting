@@ -233,12 +233,6 @@ affective_relations = [
     "Desires",
 ]
 
-relDecodeConstraint = {
-    0: physical_relations,
-    1: event_relations,
-    2: affective_relations,
-}
-
 # configs 
 # USE_CONSTRAINT = False
 USE_CONSTRAINT = True
@@ -252,6 +246,14 @@ AVOID_REPETITION = True # when decoding, avoid repeating the same entailment
 
 DECODE_ALL = True # decode all relations independently, and dump to json
 
+COMET_REL_ONLY = True # only decode relations in comet_only_relations
+if COMET_REL_ONLY: 
+    # take the intersection of comet_only_relations and other sets
+    all_relations = list(set(all_relations) & set(comet_only_relations))
+    physical_relations = list(set(physical_relations) & set(comet_only_relations))
+    event_relations = list(set(event_relations) & set(comet_only_relations))
+    affective_relations = list(set(affective_relations) & set(comet_only_relations))
+
 DEBUG = False
 # DEBUG = True
 
@@ -260,6 +262,12 @@ DEBUG = False
 
 
 if __name__ == "__main__":
+    relDecodeConstraint = {
+        0: physical_relations,
+        1: event_relations,
+        2: affective_relations,
+    }
+
     dataPath = "data/dataset"
     if USE_DIALOGUE_HISTORY:
         # check if the data file exists
@@ -279,6 +287,13 @@ if __name__ == "__main__":
     # load datasets
     splits = ["train", "dev", "test"]
     searchDepth = 3
+    if COMET_REL_ONLY:
+        relDecodeConstraint = {
+            0: event_relations,
+            1: affective_relations,
+        }
+        searchDepth = 2
+    
     for s in splits:
         if USE_DIALOGUE_HISTORY:
             dataName = "DialogueHistory"
@@ -395,6 +410,10 @@ if __name__ == "__main__":
                     dataName += "Last"
             else:    
                 dataName = "st"
-            with open(f"{dataPath}/{s}Comet_{dataName}_{ver}.txt", "w", encoding='utf8') as f:
+            if COMET_REL_ONLY:
+                relSet = "CometOnly"
+            else:
+                relSet = "All"
+            with open(f"{dataPath}/{s}Comet_{dataName}_{ver}_{relSet}.txt", "w", encoding='utf8') as f:
                 for s in situations:
                     f.write(s + "\n")
