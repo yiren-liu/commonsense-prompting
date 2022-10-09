@@ -1,46 +1,26 @@
 import torch
+import torch.nn as nn 
+import torch.nn.functional as F
+from torch.nn.utils.rnn import pad_sequence, pad_packed_sequence, pack_padded_sequence
 
-from transformers import (
-    AutoModelForSeq2SeqLM, 
-    AutoTokenizer,
-    BartForConditionalGeneration,
-    BartTokenizer,
-)
-
-def getBartTokenizerATOMIC2020(args):
-    tokenizer = BartTokenizer.from_pretrained(
-        args.model_name_or_path, cache_dir=args.model_cache_dir)
-    # add special tokens cls_token 
-    tokenizer.add_special_tokens({'cls_token': '<s>'})
-    additional_special_tokens = [
-        "[Question]", "[Reflection of feelings]", "[Information]", "[Restatement or Paraphrasing]",
-        "[Others]", "[Self-disclosure]", "[Affirmation and Reassurance]", "[Providing Suggestions]",
-        "[None]"
-    ]
-    tokenizer.add_tokens(additional_special_tokens)
-    return tokenizer
+class FUDGE(nn.Module):
+    def __init__(self, args, vocab_size):
+        super().__init__()
+        self.embedding = nn.Embedding(vocab_size, args.d_model, padding_idx=args.pad_token_id)
+        # a LSTM model
+        self.rnn = nn.LSTM(args.d_model, args.d_model, num_layers=1, batch_first=True)
+        # a linear layer
+        self.linear = nn.Linear(args.d_model, 1)
+    
+    def forward(self, inputs, lengths=None):
+        inputs = self.marian_embed(inputs)
+        inputs = pack_padded_sequence(inputs.permute(1, 0, 2), lengths.cpu(), enforce_sorted=False)
+        rnn_output, _ = self.rnn(inputs)
+        rnn_output, _ = pad_packed_sequence(rnn_output)
+        rnn_output = rnn_output.permute(1, 0, 2) # batch x seq x hiddenSize
+        return self.out_linear(rnn_output).squeeze(2)
 
 
-class BartATOMIC2020(BartForConditionalGeneration):
-    def __init__(self, config):
-        super().__init__(config)
-        pass
 
-    def forward(self, input_ids=None, attention_mask=None, labels=None, **kwargs):
-        # model(input_ids, attention_mask=input_ids.ne(tokenizer.pad_token_id),
-        # decoder_input_ids=decoder_input_ids, decoder_turn_ids=decoder_turn_ids,
-        # decoder_role_ids=decoder_role_ids, turn_ids=turn_ids,
-        # role_ids=role_ids, labels=decoder_label_ids,
-        # decoder_strategy_ids=decoder_strategy_ids,
-        # comet_embs=comet_embs, comet_mask=comet_mask,
-        # comet_embs_st=comet_embs_st, comet_mask_st=comet_mask_st, emotion=emotion)
-        # raise NotImplementedError("BartATOMIC2020 is not implemented yet.")
-        output = super().forward(
-            input_ids=input_ids, attention_mask=attention_mask,
-        #     decoder_input_ids=decoder_input_ids,
-        #     decoder_attention_mask=decoder_attention_mask,
-            labels=labels, **kwargs
-        )
-        return output
 
 
