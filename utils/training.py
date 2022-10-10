@@ -734,9 +734,10 @@ def generate(args, model):
         if args.generate_strategy:
             strategies = model.generate_strategy(input_ids, next_strategy_id, use_gts=args.use_gts_strategy, **paras)
             # append strategy to input_ids
-            input_ids = torch.cat([input_ids.squeeze(), strategies]).unsqueeze(0)
+            # input_ids = torch.cat([input_ids.squeeze(), strategies]).unsqueeze(0)
             chat_history_ids = model.generate(
                 input_ids,
+                decoder_start_token_id=strategies,
                 # **paras, 
                 max_length=100,min_length=5,num_beams=1,
                 pad_token_id=tokenizer.pad_token_id,use_cache=True,
@@ -770,10 +771,11 @@ def generate(args, model):
         # else:
         #     strategy_hits.append(0)
         
-        if args.generate_strategy:
-            output_ids = torch.cat([strategies.cpu(), chat_history_ids[:, :][0]])
-        else:
-            output_ids = chat_history_ids[:, :][0]
+        # if args.generate_strategy:
+        #     output_ids = torch.cat([strategies.cpu(), chat_history_ids[:, :][0]])
+        # else:
+        #     output_ids = chat_history_ids[:, :][0]
+        output_ids = chat_history_ids[:, :][0]
 
         refs.append(tokenizer.decode(output_ids, skip_special_tokens=True))
         # print(tokenizer.decode(chat_history_ids[:, :][0], skip_special_tokens=True))
