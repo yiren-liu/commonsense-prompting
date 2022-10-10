@@ -2,45 +2,6 @@ import os
 
 class Args():
     def __init__(self):
-
-        
-        # TAG = 'baseline'
-        # self.situation_train_file_name = "trainSituation.txt"
-        # self.situation_eval_file_name = "devSituation.txt"
-        # self.situation_test_file_name = "testSituation.txt"
-        # self.data_cache_dir = './cached/data/bart/add_context_add_strategy'
-
-        # TAG = 'relNoConstraint'
-        # self.situation_train_file_name = "trainComet_st_relAll.txt"
-        # self.situation_eval_file_name = "devComet_st_relAll.txt"
-        # self.situation_test_file_name = "testComet_st_relAll.txt"
-        # self.data_cache_dir = './cached/data/bart/add_contextCOMET'
-
-        TAG = 'relConstraint'
-        self.situation_train_file_name = "trainComet_st_relConstraint.txt"
-        self.situation_eval_file_name = "devComet_st_relConstraint.txt"
-        self.situation_test_file_name = "testComet_st_relConstraint.txt"
-        self.data_cache_dir = './cached/data/bart/add_contextCOMET_relConstraint'
-
-
-
-
-
-
-        # TAG = 'debug'
-        # TAG = 'baseline'
-        # TAG = 'relConstraint_base'
-        # TAG = 'all_data'
-        # TAG = 'sample_0.2'
-        # TAG = 'sample_100'
-        # TAG = 'all_loss'
-        # TAG = 'emotion'
-        # TAG = 'ablation_strategy'
-        # TAG = 'ablation_situation'
-        # TAG = 'ablation_post'
-        # nowtime = '10251756'
-        self.output_dir = os.path.join('checkpoints', 'bart', TAG)
-        self.generation_dir = os.path.join('outputs', 'bart_generated', TAG)
         self.model_type = 'mymodel'
      #    self.model_name_or_path = './blender-small'
         self.model_name_or_path = "facebook/bart-large"
@@ -111,3 +72,46 @@ class Args():
         self.context = True
         self.turn = False
         self.role = False
+
+        self.DEBUG = True
+
+        if self.DEBUG:       
+            self.per_gpu_train_batch_size = 1
+            self.per_gpu_eval_batch_size = 1
+            self.data_path = "./data/dataset/sample_100"
+            self.data_cache_dir = './cached/data/bart/debug_100'
+            self.model_cache_dir = './cached/models/bart/debug'
+            self.model_name_or_path = "facebook/bart-base"
+            self.config_name = "facebook/bart-base"
+            self.tokenizer_name = "facebook/bart-base"
+
+        TAG = 'genStrategyWithGold'
+        self.generate_strategy = True
+        self.use_gts_strategy = True
+        self.situation_train_file_name = "trainSituation.txt"
+        self.situation_eval_file_name = "devSituation.txt"
+        self.situation_test_file_name = "testSituation.txt"
+        self.data_cache_dir = './cached/data/bart/add_context_add_strategy'
+        self.do_train = False
+        self.load_dir = os.path.join('checkpoints', 'bart', 'debug')
+
+        # TAG = 'baseline'
+        # self.situation_train_file_name = "trainSituation.txt"
+        # self.situation_eval_file_name = "devSituation.txt"
+        # self.situation_test_file_name = "testSituation.txt"
+        # self.data_cache_dir = './cached/data/bart/add_context_add_strategy'
+
+        # TAG = 'relNoConstraint'
+        # self.situation_train_file_name = "trainComet_st_relAll.txt"
+        # self.situation_eval_file_name = "devComet_st_relAll.txt"
+        # self.situation_test_file_name = "testComet_st_relAll.txt"
+        # self.data_cache_dir = './cached/data/bart/add_contextCOMET'
+
+        # TAG = 'relConstraint'
+        # self.situation_train_file_name = "trainComet_st_relConstraint.txt"
+        # self.situation_eval_file_name = "devComet_st_relConstraint.txt"
+        # self.situation_test_file_name = "testComet_st_relConstraint.txt"
+        # self.data_cache_dir = './cached/data/bart/add_contextCOMET_relConstraint'
+
+        self.output_dir = os.path.join('checkpoints', 'bart', TAG)
+        self.generation_dir = os.path.join('outputs', 'bart_generated', TAG)

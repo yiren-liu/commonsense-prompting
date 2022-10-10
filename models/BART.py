@@ -42,5 +42,12 @@ class BartATOMIC2020(BartForConditionalGeneration):
             labels=labels, **kwargs
         )
         return output
+    
+    def generate_strategy(self, input_id, next_strategy_id, use_gts=False, **kwargs):
+        # input_ids: [batch_size, seq_len]
+        # next_strategy_id: [batch_size, 1]
+        # use_gts: whether to use ground truth strategy
 
+        if use_gts:
+            return next_strategy_id
 

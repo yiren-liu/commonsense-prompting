@@ -227,7 +227,7 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
                     print(tokenizer.decode(item))
                 for item in decoder_labels[:1]:
                     print(len(item))
-                    item[item==-100] = 1
+                    item[item==-100] = tokenizer.pad_token_id
                     print(tokenizer.decode(item))
                 # raise Exception("debug")
                 print_cnt+=1
@@ -256,17 +256,17 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
 
             batch_size, n_attr, len_attr = comet_ids.shape
             comet_ids = comet_ids.view(-1, len_attr)
-            with torch.no_grad():
-                comet_embs = model.model.encoder(
-                    comet_ids, attention_mask=comet_ids.ne(tokenizer.pad_token_id))[0][:, 0, :]
-            comet_embs = comet_embs.view(batch_size, n_attr, -1)
+            # with torch.no_grad():
+            #     comet_embs = model.model.encoder(
+            #         comet_ids, attention_mask=comet_ids.ne(tokenizer.pad_token_id))[0][:, 0, :]
+            # comet_embs = comet_embs.view(batch_size, n_attr, -1)
 
             batch_size, n_attr, len_attr = comet_ids_st.shape
             comet_ids_st = comet_ids_st.view(-1, len_attr)
-            with torch.no_grad():
-                comet_embs_st = model.model.encoder(
-                    comet_ids_st, attention_mask=comet_ids_st.ne(tokenizer.pad_token_id))[0][:, 0, :]
-            comet_embs_st = comet_embs_st.view(batch_size, n_attr, -1)
+            # with torch.no_grad():
+            #     comet_embs_st = model.model.encoder(
+            #         comet_ids_st, attention_mask=comet_ids_st.ne(tokenizer.pad_token_id))[0][:, 0, :]
+            # comet_embs_st = comet_embs_st.view(batch_size, n_attr, -1)
 
             input_ids = input_ids.to(args.device)
             turn_ids = turn_ids.to(args.device)
@@ -502,18 +502,18 @@ def evaluate(args, model: PreTrainedModel, tokenizer: PreTrainedTokenizer, eval_
         batch_size, n_attr, len_attr = comet_ids.shape
         comet_ids = comet_ids.view(-1, len_attr)
 
-        with torch.no_grad():
-            comet_embs = model.model.encoder(
-                comet_ids, attention_mask=comet_ids.ne(tokenizer.pad_token_id))[0][:, 0, :]
+        # with torch.no_grad():
+        #     comet_embs = model.model.encoder(
+        #         comet_ids, attention_mask=comet_ids.ne(tokenizer.pad_token_id))[0][:, 0, :]
 
-        comet_embs = comet_embs.view(batch_size, n_attr, -1)
-        batch_size, n_attr, len_attr = comet_ids_st.shape
-        comet_ids_st = comet_ids_st.view(-1, len_attr)
+        # comet_embs = comet_embs.view(batch_size, n_attr, -1)
+        # batch_size, n_attr, len_attr = comet_ids_st.shape
+        # comet_ids_st = comet_ids_st.view(-1, len_attr)
 
-        with torch.no_grad():
-            comet_embs_st = model.model.encoder(
-                comet_ids_st, attention_mask=comet_ids_st.ne(tokenizer.pad_token_id))[0][:, 0, :]
-        comet_embs_st = comet_embs_st.view(batch_size, n_attr, -1)
+        # with torch.no_grad():
+        #     comet_embs_st = model.model.encoder(
+        #         comet_ids_st, attention_mask=comet_ids_st.ne(tokenizer.pad_token_id))[0][:, 0, :]
+        # comet_embs_st = comet_embs_st.view(batch_size, n_attr, -1)
 
         input_ids = input_ids.to(args.device)
         turn_ids = turn_ids.to(args.device)
@@ -692,21 +692,23 @@ def generate(args, model):
         comet_mask = torch.tensor([f.comet_mask], dtype=torch.long)
         comet_ids_st = torch.tensor([f.comet_st_ids], dtype=torch.long)
         comet_mask_st = torch.tensor([f.comet_st_mask], dtype=torch.long)
+        next_strategy_id = torch.tensor([next_strategy_id], dtype=torch.long)
 
         comet_ids = comet_ids.to(args.device)
         comet_mask = comet_mask.to(args.device)
         comet_ids_st = comet_ids_st.to(args.device)
         comet_mask_st = comet_mask_st.to(args.device)
+        next_strategy_id = next_strategy_id.to(args.device)
 
-        batch_size, n_attr, len_attr = comet_ids.shape
-        comet_ids = comet_ids.view(-1, len_attr)
-        comet_embs = model.model.encoder(comet_ids, attention_mask=comet_ids.ne(tokenizer.pad_token_id))[0][:, 0, :]
-        comet_embs = comet_embs.view(batch_size, n_attr, -1)
+        # batch_size, n_attr, len_attr = comet_ids.shape
+        # comet_ids = comet_ids.view(-1, len_attr)
+        # comet_embs = model.model.encoder(comet_ids, attention_mask=comet_ids.ne(tokenizer.pad_token_id))[0][:, 0, :]
+        # comet_embs = comet_embs.view(batch_size, n_attr, -1)
 
-        batch_size, n_attr, len_attr = comet_ids_st.shape
-        comet_ids_st = comet_ids_st.view(-1, len_attr)
-        comet_embs_st = model.model.encoder(comet_ids_st, attention_mask=comet_ids_st.ne(tokenizer.pad_token_id))[0][:, 0, :]
-        comet_embs_st = comet_embs_st.view(batch_size, n_attr, -1)
+        # batch_size, n_attr, len_attr = comet_ids_st.shape
+        # comet_ids_st = comet_ids_st.view(-1, len_attr)
+        # comet_embs_st = model.model.encoder(comet_ids_st, attention_mask=comet_ids_st.ne(tokenizer.pad_token_id))[0][:, 0, :]
+        # comet_embs_st = comet_embs_st.view(batch_size, n_attr, -1)
 
         paras = {}
         input_ids = torch.tensor([f.input_ids], dtype=torch.long).to(args.device)
@@ -729,13 +731,27 @@ def generate(args, model):
         # print(tokenizer.decode(input_ids[0]))
         # print(input_ids)
 
-        chat_history_ids = model.generate(
-            input_ids,
-            **paras, max_length=100,min_length=5,num_beams=1,
-            pad_token_id=tokenizer.pad_token_id,use_cache=True,
-            eos_token_id=tokenizer.eos_token_id, temperature=0.7,
-            top_p=0.3, top_k = 30, do_sample=True, repetition_penalty=1.03
-        ) #top_p 0.9, topk 30
+        if args.generate_strategy:
+            strategies = model.generate_strategy(input_ids, next_strategy_id, use_gts=args.use_gts_strategy, **paras)
+            # append strategy to input_ids
+            input_ids = torch.cat([input_ids.squeeze(), strategies]).unsqueeze(0)
+            chat_history_ids = model.generate(
+                input_ids,
+                # **paras, 
+                max_length=100,min_length=5,num_beams=1,
+                pad_token_id=tokenizer.pad_token_id,use_cache=True,
+                eos_token_id=tokenizer.eos_token_id, temperature=0.7,
+                top_p=0.3, top_k = 30, do_sample=True, repetition_penalty=1.03
+            ) #top_p 0.9, topk 30
+            # raise NotImplementedError
+        else:
+            chat_history_ids = model.generate(
+                input_ids,
+                **paras, max_length=100,min_length=5,num_beams=1,
+                pad_token_id=tokenizer.pad_token_id,use_cache=True,
+                eos_token_id=tokenizer.eos_token_id, temperature=0.7,
+                top_p=0.3, top_k = 30, do_sample=True, repetition_penalty=1.03
+            ) #top_p 0.9, topk 30
 
         # print(tokenizer.decode(chat_history_ids[:, :][0][2:], skip_special_tokens=True))
         # raise Exception("stop")
@@ -753,7 +769,13 @@ def generate(args, model):
         #     strategy_hits.append(1)
         # else:
         #     strategy_hits.append(0)
-        refs.append(tokenizer.decode(chat_history_ids[:, :][0], skip_special_tokens=True))
+        
+        if args.generate_strategy:
+            output_ids = torch.cat([strategies.cpu(), chat_history_ids[:, :][0]])
+        else:
+            output_ids = chat_history_ids[:, :][0]
+
+        refs.append(tokenizer.decode(output_ids, skip_special_tokens=True))
         # print(tokenizer.decode(chat_history_ids[:, :][0], skip_special_tokens=True))
         # strategy_record.append({"ref strategy":tokenizer.decode([next_strategy_id + 54944]),  "hyp strategy":tokenizer.decode([strategy_logits[0].argmax()+54944])})
         # print({"ref strategy":tokenizer.decode([next_strategy_id + 54944]),  "hyp strategy":tokenizer.decode([chat_history_ids[:, :][0][1]])})
@@ -806,6 +828,10 @@ def generate(args, model):
     result, result_list = metric.close()
     print(result)
     print("=" * 100)
+
+    with open(summary_file_path, 'a', encoding='utf-8') as f:
+        f.write("\n")
+        f.write(str(result))
 
 
 

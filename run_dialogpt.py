@@ -15,9 +15,9 @@ except ImportError:
 from tqdm import tqdm, trange
 
 
-from utils.dataloader import ESDDatasetBartCOMET2020
-from models.BART import BartATOMIC2020, getBartTokenizerATOMIC2020
-from config_bart import Args
+from utils.dataloader import ESDDatasetGPT2COMET2020
+from models.dialoGPT import getGPT2TokenizerATOMIC2020, GPT2ATOMIC2020
+from config_dialogpt import Args
 from utils.training import train, evaluate, generate, set_seed
 
 # Configs
@@ -43,11 +43,11 @@ if __name__ == "__main__":
     set_seed(args)
 
     # load tokenizer
-    tokenizer = getBartTokenizerATOMIC2020(args)
+    tokenizer = getGPT2TokenizerATOMIC2020(args)
     args.tokenizer = tokenizer
 
     # model = BlenderbotSmallForConditionalGeneration.from_pretrained(args.model_name_or_path, cache_dir=args.model_cache_dir)
-    model = BartATOMIC2020.from_pretrained(
+    model = GPT2ATOMIC2020.from_pretrained(
         args.model_name_or_path, cache_dir=args.model_cache_dir)
     model.resize_token_embeddings(len(tokenizer))
     model.to(args.device)
@@ -88,11 +88,11 @@ if __name__ == "__main__":
         with open(args.data_path+"/" + args.situation_test_file_name, "r", encoding="utf-8") as f:
             st_test = f.read().split("\n")
 
-        args.train_dataset = ESDDatasetBartCOMET2020(tokenizer, args, df_trn, comet_trn,
+        args.train_dataset = ESDDatasetGPT2COMET2020(tokenizer, args, df_trn, comet_trn,
                                         st_comet_trn, st_trn, strategy=args.strategy, evaluate=False, test=False, add_situ=args.context)
-        args.eval_dataset = ESDDatasetBartCOMET2020(tokenizer, args, df_val, comet_val,
+        args.eval_dataset = ESDDatasetGPT2COMET2020(tokenizer, args, df_val, comet_val,
                                        st_comet_val, st_val, evaluate=True, strategy=args.strategy, test=False, add_situ=args.context)
-        args.test_dataset = ESDDatasetBartCOMET2020(tokenizer, args, df_test, comet_test,
+        args.test_dataset = ESDDatasetGPT2COMET2020(tokenizer, args, df_test, comet_test,
                                        st_comet_test, st_test, evaluate=True, strategy=args.strategy, test=True, add_situ=args.context)
 
         # # Training
@@ -102,7 +102,7 @@ if __name__ == "__main__":
                     global_step, tr_loss)
 
         # evaluation
-        model = BartATOMIC2020.from_pretrained(
+        model = GPT2ATOMIC2020.from_pretrained(
             args.output_dir, from_tf=False)
         model.to(args.device)
         test_results = evaluate(args, model, tokenizer,
@@ -119,10 +119,10 @@ if __name__ == "__main__":
         df_test = f.read().split("\n")
     with open(args.data_path+"/" + args.situation_test_file_name, "r", encoding="utf-8") as f:
         st_test = f.read().split("\n")
-    args.test_dataset = ESDDatasetBartCOMET2020(tokenizer, args, df_test, comet_test,
+    args.test_dataset = ESDDatasetGPT2COMET2020(tokenizer, args, df_test, comet_test,
                                     st_comet_test, st_test, evaluate=True, strategy=args.strategy, test=True, add_situ=args.context)
 
-    model = BartATOMIC2020.from_pretrained(args.load_dir,
+    model = GPT2ATOMIC2020.from_pretrained(args.output_dir,
         from_tf=False)
     model.resize_token_embeddings(len(tokenizer))
 
