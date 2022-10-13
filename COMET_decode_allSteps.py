@@ -31,7 +31,8 @@ class Comet:
         task = "summarization"
         use_task_specific_params(self.model, task)
         # self.batch_size = 2
-        self.batch_size = 20
+        # self.batch_size = 20
+        self.batch_size = 40
         if DEBUG: self.batch_size = 2
         self.decoder_start_token_id = None
 

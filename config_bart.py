@@ -73,7 +73,8 @@ class Args():
         self.turn = False
         self.role = False
 
-        self.DEBUG = True
+        # self.DEBUG = True
+        self.DEBUG = False
 
         if self.DEBUG:       
             self.per_gpu_train_batch_size = 1
@@ -93,7 +94,7 @@ class Args():
         self.situation_test_file_name = "testSituation.txt"
         self.data_cache_dir = './cached/data/bart/add_context_add_strategy'
         self.do_train = False
-        self.load_dir = os.path.join('checkpoints', 'bart', 'debug')
+        self.load_dir = os.path.join('checkpoints', 'bart', 'baseline')
 
         # TAG = 'baseline'
         # self.situation_train_file_name = "trainSituation.txt"

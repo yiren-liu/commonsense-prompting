@@ -122,7 +122,7 @@ if __name__ == "__main__":
     args.test_dataset = ESDDatasetBartCOMET2020(tokenizer, args, df_test, comet_test,
                                     st_comet_test, st_test, evaluate=True, strategy=args.strategy, test=True, add_situ=args.context)
 
-    model = BartATOMIC2020.from_pretrained(args.output_dir,
+    model = BartATOMIC2020.from_pretrained(args.load_dir,
         from_tf=False)
     model.resize_token_embeddings(len(tokenizer))
 

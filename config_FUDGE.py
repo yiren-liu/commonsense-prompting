@@ -8,8 +8,8 @@ class Args():
         self.generation = False
         self.generate_and_eval = False
         self.evaluate_during_training = True
-        self.per_gpu_train_batch_size = 10
-        self.per_gpu_eval_batch_size = 20    
+        self.per_gpu_train_batch_size = 40
+        self.per_gpu_eval_batch_size = 80    
             
         # self.per_gpu_train_batch_size = 1
         # self.per_gpu_eval_batch_size = 1
@@ -23,8 +23,8 @@ class Args():
         self.num_train_epochs = 40  # raw 10
         self.max_steps = -1
         self.warmup_steps = 120  # raw 120
-        self.logging_steps = 100
-        self.save_steps = 100
+        self.logging_steps = 200
+        self.save_steps = 200
         self.save_total_limit = None
         self.eval_all_checkpoints = False
         self.no_cuda = False
@@ -48,17 +48,18 @@ class Args():
             "[None]": 8,
         }
 
-        self.d_model = 300
+        # self.d_model = 300
+        self.d_model = 600
 
-        TAG = 'debug'
+        TAG = 'baseline'
         TAG += '__d_model__' + str(self.d_model)
         self.output_dir = os.path.join('checkpoints', 'FUDGE', TAG)
         # self.generation_dir = os.path.join('outputs', 'bart_generated', TAG)
         self.model_type = 'mymodel'
         # self.tokenizer_name = "facebook/bart-base"
 
-        self.data_path = "./data/dataset/sample_100"
-        self.data_cache_dir = f'./cached/data/FUDGE/{TAG}/sample_100'
+        self.data_path = "./data/dataset"
+        self.data_cache_dir = f'./cached/data/FUDGE/{TAG}/all_data'
 
         self.train_file_name = "trainWithStrategy_short.tsv"
         self.eval_file_name = "devWithStrategy_short.tsv"
@@ -80,7 +81,7 @@ class Args():
         self.turn = False
         self.role = False
 
-        self.target_model_path = './checkpoints/bart/debug'
+        self.target_model_path = './checkpoints/bart/baseline'
         self.model_cache_dir = f'./cached/models/FUDGE/{TAG}'
 
 
