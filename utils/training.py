@@ -36,6 +36,18 @@ from utils.evaluation import summary, Metric
 
 logger = logging.getLogger()
 
+STRATEGY2ID = {
+            "[Question]": 0,
+            "[Reflection of feelings]": 1,
+            "[Information]": 2,
+            "[Restatement or Paraphrasing]": 3,
+            "[Others]": 4,
+            "[Self-disclosure]": 5,
+            "[Affirmation and Reassurance]": 6,
+            "[Providing Suggestions]": 7,
+            "[None]": 8,
+}
+
 
 def set_seed(args):
     random.seed(args.seed)
@@ -663,6 +675,9 @@ def generate(args, model):
     strategy_record = []
     strategy_hits_topk = [[] for _ in range(8)]
     for idx, (c_text, comet_row, comet_st_row, st_row) in tqdm(enumerate(zip(chat_texts[:-1], comet[:-1], comet_st[:-1], st_test[:-1])), desc="Testing", total=len(chat_texts[:-1])):
+        if args.DEBUG:
+            if idx > 3:
+                break
         if "EOS" not in c_text:
             continue
         # if idx>=100:
@@ -737,16 +752,37 @@ def generate(args, model):
             # strategies = torch.tensor(strategies, dtype=torch.long).to(args.device)
             # append strategy to input_ids
             # input_ids = torch.cat([input_ids.squeeze(), strategies]).unsqueeze(0)
-            chat_history_ids = model.generate(
-                input_ids,
-                decoder_start_token_id = strategies,
-                # **paras, 
-                max_length=100,min_length=5,num_beams=1,
-                pad_token_id=tokenizer.pad_token_id,use_cache=True,
-                eos_token_id=tokenizer.eos_token_id, temperature=0.7,
-                top_p=0.3, top_k = 30, do_sample=True, repetition_penalty=1.03
-            ) #top_p 0.9, topk 30
-            # raise NotImplementedError
+
+            if args.use_fudge:
+                # load fudge model
+                conditioning_model = torch.load(args.fudge_model_path + "/pytorch_model.bin")
+                conditioning_model.to(args.device)
+                conditioning_model.eval()
+
+                # get strategy idx
+                target_attr_idx = STRATEGY2ID[tokenizer.decode(strategies, skip_special_tokens=True)]
+
+                chat_history_ids = model.generate_fudge(
+                    input_ids, model, tokenizer, 
+                    conditioning_model, target_attr_idx,
+                    decoder_start_token_id = strategies.item(),
+                    precondition_topk=200, length_cutoff=512, 
+                    condition_lambda=1.0, 
+                    # condition_lambda=0.0, 
+                    device=args.device
+                )
+                # raise NotImplementedError
+            else:
+                chat_history_ids = model.generate(
+                    input_ids,
+                    decoder_start_token_id = strategies,
+                    # **paras, 
+                    max_length=100,min_length=5,num_beams=1,
+                    pad_token_id=tokenizer.pad_token_id,use_cache=True,
+                    eos_token_id=tokenizer.eos_token_id, temperature=0.7,
+                    top_p=0.3, top_k = 30, do_sample=True, repetition_penalty=1.03
+                ) #top_p 0.9, topk 30
+                # raise NotImplementedError
         else:
             chat_history_ids = model.generate(
                 input_ids,

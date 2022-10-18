@@ -7,6 +7,8 @@ from transformers import (
     BartTokenizer,
 )
 
+from utils.fudge_utils import predict_formality
+
 def getBartTokenizerATOMIC2020(args):
     tokenizer = BartTokenizer.from_pretrained(
         args.model_name_or_path, cache_dir=args.model_cache_dir)
@@ -43,7 +45,7 @@ class BartATOMIC2020(BartForConditionalGeneration):
         )
         return output
     
-    def generate_strategy(self, input_id, next_strategy_id, use_gts=False, **kwargs):
+    def generate_strategy(self, input_ids, next_strategy_id, use_gts=False, **kwargs):
         # input_ids: [batch_size, seq_len]
         # next_strategy_id: [batch_size, 1]
         # use_gts: whether to use ground truth strategy
@@ -51,3 +53,19 @@ class BartATOMIC2020(BartForConditionalGeneration):
         if use_gts:
             return next_strategy_id
 
+
+    def generate_fudge(self, encoder_input_ids, model, tokenizer, conditioning_model, target_attr_idx, decoder_start_token_id=None, precondition_topk=200, length_cutoff=512, condition_lambda=1.0, device='cuda'):
+        results = predict_formality(
+            model, 
+            tokenizer, 
+            conditioning_model, 
+            target_attr_idx,
+            encoder_input_ids,  
+            decoder_start_token_id=decoder_start_token_id,
+            precondition_topk=precondition_topk,
+            do_sample=False,
+            length_cutoff=length_cutoff,
+            condition_lambda=condition_lambda,
+            device=device
+        )
+        return results

@@ -57,8 +57,8 @@ class Args():
         self.save_steps = 100
         self.save_total_limit = None
         self.eval_all_checkpoints = False
-        self.no_cuda = False
-        #    self.no_cuda = True
+        # self.no_cuda = False
+        self.no_cuda = True
         self.overwrite_output_dir = True
         self.overwrite_cache = False
         self.should_continue = False
@@ -73,10 +73,24 @@ class Args():
         self.turn = False
         self.role = False
 
-        # self.DEBUG = True
-        self.DEBUG = False
+        self.DEBUG = True
+        # self.DEBUG = False
 
-        if self.DEBUG:       
+
+        TAG = 'genStrategyWithGold'
+        self.generate_strategy = True
+        self.use_gts_strategy = True
+        self.use_fudge = True
+        self.situation_train_file_name = "trainSituation.txt"
+        self.situation_eval_file_name = "devSituation.txt"
+        self.situation_test_file_name = "testSituation.txt"
+        self.data_cache_dir = './cached/data/bart/add_context_add_strategy'
+        self.do_train = False
+        self.load_dir = os.path.join('checkpoints', 'bart', 'baseline')
+        self.fudge_model_path = os.path.join('checkpoints', 'FUDGE', 'baseline__d_model__300')
+
+        if self.DEBUG:      
+            TAG = 'debug'
             self.per_gpu_train_batch_size = 1
             self.per_gpu_eval_batch_size = 1
             self.data_path = "./data/dataset/sample_100"
@@ -85,16 +99,9 @@ class Args():
             self.model_name_or_path = "facebook/bart-base"
             self.config_name = "facebook/bart-base"
             self.tokenizer_name = "facebook/bart-base"
+            # self.load_dir = os.path.join('checkpoints', 'bart', 'debug')
+            self.load_dir = os.path.join('checkpoints', 'bart', 'baseline')
 
-        TAG = 'genStrategyWithGold'
-        self.generate_strategy = True
-        self.use_gts_strategy = True
-        self.situation_train_file_name = "trainSituation.txt"
-        self.situation_eval_file_name = "devSituation.txt"
-        self.situation_test_file_name = "testSituation.txt"
-        self.data_cache_dir = './cached/data/bart/add_context_add_strategy'
-        self.do_train = False
-        self.load_dir = os.path.join('checkpoints', 'bart', 'baseline')
 
         # TAG = 'baseline'
         # self.situation_train_file_name = "trainSituation.txt"
