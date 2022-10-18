@@ -51,7 +51,7 @@ if __name__ == "__main__":
     )
     args.tokenizer = tokenizer
 
-    model = FUDGE_strategy(args, tokenizer.vocab_size)
+    model = FUDGE_strategy(args, len(tokenizer))
     
     model.to(args.device)
 
