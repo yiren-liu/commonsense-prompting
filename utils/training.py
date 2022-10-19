@@ -416,6 +416,12 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
                         model_to_save.save_pretrained(output_dir)
                         tokenizer.save_pretrained(output_dir)
 
+                        if model_to_save.strategy_classifier:
+                            torch.save(args, os.path.join(
+                                output_dir, "strategy_classifier.bin"))
+                            logger.info(
+                                "Saving strategy classifier to %s", output_dir)
+
                         torch.save(args, os.path.join(
                             output_dir, "training_args.bin"))
                         logger.info(
