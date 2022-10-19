@@ -301,16 +301,16 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
                 ppl = loss = outputs[0]
             else:
                 if args.strategy_predictor == "classifier":
-                    output_lm, classifier_loss = model.train_with_classifier_loss(
+                    outputs, classifier_loss = model.train_with_classifier_loss(
                         input_ids, attention_mask=input_ids.ne(tokenizer.pad_token_id), 
                         labels=decoder_label_ids, 
                         next_strategy_id=decoder_strategy_ids,
                         args=args,
                     )
-                    lm_loss = output_lm.loss
+                    lm_loss = outputs.loss
                     loss = lm_loss + classifier_loss * args.classifier_alpha
                     ppl = torch.exp(lm_loss)
-                    raise NotImplementedError
+                    # raise NotImplementedError
                 elif args.strategy_predictor == "lm":
                     outputs = model(
                         input_ids, attention_mask=input_ids.ne(tokenizer.pad_token_id), 

@@ -104,7 +104,7 @@ class BartATOMIC2020(BartForConditionalGeneration):
                 classifier_logits = classifier(input_ids)
                 max_strategy_logits, max_strategy_ids = torch.max(classifier_logits, dim=1)
                 best_strategy_ids = strategy_ids[max_strategy_ids]
-            raise NotImplementedError
+            # raise NotImplementedError
             return torch.LongTensor([best_strategy_ids]).to(args.device)
         else:
             raise NotImplementedError
