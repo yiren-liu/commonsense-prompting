@@ -18,10 +18,9 @@ from transformers import (
 )
 
 from utils.dataloader import ESDDatasetBartCOMET2020
-from models.FUDGE import FUDGE_strategy
-from models.BART import getBartTokenizerATOMIC2020
-from config_FUDGE import Args
-from utils.fudge_utils import train, evaluate, generate, set_seed
+from models.strategy_predictor.LSTM import LSTM_predictor
+from config_predictor import Args
+from utils.predictor_utils import train, evaluate, generate, set_seed
 
 # Configs
 # logger
@@ -51,7 +50,7 @@ if __name__ == "__main__":
     )
     args.tokenizer = tokenizer
 
-    model = FUDGE_strategy(args, len(tokenizer))
+    model = LSTM_predictor(args, len(tokenizer))
     
     model.to(args.device)
 
@@ -105,9 +104,7 @@ if __name__ == "__main__":
                     global_step, tr_loss)
 
         # evaluation
-        # load the LSTM model from the checkpoint
-        # model = BartATOMIC2020.from_pretrained(
-        #     args.output_dir, from_tf=False)
+        # load the model from the checkpoint
         model = torch.load(args.output_dir + "/pytorch_model.bin")
         model.to(args.device)
         test_results = evaluate(args, model, tokenizer,

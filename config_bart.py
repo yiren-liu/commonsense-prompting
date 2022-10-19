@@ -25,7 +25,17 @@ class Args():
         self.situation_eval_comet_file = "devComet_st.txt"
         self.situation_test_comet_file = "testComet_st.txt"
 
-
+        self.strategy2id = {
+            "[Question]": 0,
+            "[Reflection of feelings]": 1,
+            "[Information]": 2,
+            "[Restatement or Paraphrasing]": 3,
+            "[Others]": 4,
+            "[Self-disclosure]": 5,
+            "[Affirmation and Reassurance]": 6,
+            "[Providing Suggestions]": 7,
+            "[None]": 8,
+        }
 
 
         # self.model_cache_dir = './cached/models/bart/debug'
@@ -79,13 +89,18 @@ class Args():
 
         TAG = 'genStrategyWithGold'
         self.generate_strategy = True
-        self.use_gts_strategy = True
+        # self.strategy_predictor = "lm"
+        # self.strategy_predictor = "gts"
+        self.strategy_predictor = "classifier"
+        self.classifier_alpha = 1.0
+        self.d_model = 768
         self.use_fudge = True
+
         self.situation_train_file_name = "trainSituation.txt"
         self.situation_eval_file_name = "devSituation.txt"
         self.situation_test_file_name = "testSituation.txt"
         self.data_cache_dir = './cached/data/bart/add_context_add_strategy'
-        self.do_train = False
+        self.do_train = True
         self.load_dir = os.path.join('checkpoints', 'bart', 'baseline')
         self.fudge_model_path = os.path.join('checkpoints', 'FUDGE', 'baseline__d_model__300')
 

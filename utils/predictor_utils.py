@@ -9,7 +9,10 @@ import json
 
 import numpy as np
 
+from sklearn.metrics import f1_score
+
 import torch
+from torch import nn
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader, Dataset, RandomSampler, SequentialSampler
 from torch.utils.data.distributed import DistributedSampler
@@ -20,6 +23,7 @@ from transformers import (
     get_linear_schedule_with_warmup,
     PreTrainedModel,
     PreTrainedTokenizer,
+    generation_utils,
 )
 from torch.optim import AdamW
 
@@ -35,18 +39,6 @@ from tqdm import tqdm, trange
 from utils.evaluation import summary, Metric
 
 logger = logging.getLogger()
-
-STRATEGY2ID = {
-            "[Question]": 0,
-            "[Reflection of feelings]": 1,
-            "[Information]": 2,
-            "[Restatement or Paraphrasing]": 3,
-            "[Others]": 4,
-            "[Self-disclosure]": 5,
-            "[Affirmation and Reassurance]": 6,
-            "[Providing Suggestions]": 7,
-            "[None]": 8,
-}
 
 
 def set_seed(args):
@@ -84,7 +76,7 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
 
     # Take care of distributed/parallel training
     model = model.module if hasattr(model, "module") else model
-    model.resize_token_embeddings(len(tokenizer))
+    # model.resize_token_embeddings(len(tokenizer))
     # Prepare optimizer and schedule (linear warmup and decay)
     no_decay = ["bias", "LayerNorm.weight"]
     optimizer_grouped_parameters = [
@@ -185,7 +177,7 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
     tr_loss, logging_loss, tr_lm_loss, logging_lm_loss, tr_emo_loss, \
         logging_emo_loss, tr_strategy_loss, logging_strategy_loss, tr_intensity_loss, logging_intensity_loss = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
     tr_ppl, logging_ppl = 0.0, 0.0
-    best_ppl = 1e8
+    best_loss = 1e8
 
     model.zero_grad()
     #train_iterator = range(epochs_trained, int(args.num_train_epochs))
@@ -195,29 +187,10 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
     import numpy as np
     np.set_printoptions(threshold=np.inf)
 
+    criterion = nn.CrossEntropyLoss().to(args.device)
+
     print_cnt = 0
     for epoch in train_iterator:
-        # if epoch < 3:
-        #     for paras in model.model.encoder.parameters():
-        #         paras.requires_grad = True
-        #     for paras in model.model.decoder.parameters():
-        # #         paras.requires_grad = False
-        # if epoch < 6:
-        #     if epoch % 2 == 0:
-        #         for paras in model.model.encoder.parameters():
-        #             paras.requires_grad = True
-        #         for paras in model.model.decoder.parameters():
-        #             paras.requires_grad = False
-        #     else:
-        #         for paras in model.model.encoder.parameters():
-        #             paras.requires_grad = False
-        #         for paras in model.model.decoder.parameters():
-        #             paras.requires_grad = True
-        # else:
-        #     for paras in model.model.encoder.parameters():
-        #         paras.requires_grad = True
-        #     for paras in model.model.decoder.parameters():
-        #         paras.requires_grad = True
 
         epoch_iterator = tqdm(train_dataloader, desc="Training Epoch: %s"%epoch)
         for step, batch in enumerate(epoch_iterator):
@@ -300,37 +273,22 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
                 # model outputs are always tuple in transformers (see doc)
                 ppl = loss = outputs[0]
             else:
-                if args.strategy_predictor == "classifier":
-                    output_lm, classifier_loss = model.train_with_classifier_loss(
-                        input_ids, attention_mask=input_ids.ne(tokenizer.pad_token_id), 
-                        labels=decoder_label_ids, 
-                        next_strategy_id=decoder_strategy_ids,
-                        args=args,
-                    )
-                    lm_loss = output_lm.loss
-                    loss = lm_loss + classifier_loss * args.classifier_alpha
-                    ppl = torch.exp(lm_loss)
-                    raise NotImplementedError
-                elif args.strategy_predictor == "lm":
-                    outputs = model(
-                        input_ids, attention_mask=input_ids.ne(tokenizer.pad_token_id), 
-                        labels=decoder_label_ids,
-                    )
-                    logits = outputs[1]
+                inputs = input_ids.cpu()[:, 1:]
+                inputs[(inputs==args.tokenizer.pad_token_id) | (inputs==-100)] = args.tokenizer.pad_token_id
+                lengths = (inputs!=args.tokenizer.pad_token_id).sum(axis=1)
+                inputs = inputs.to(args.device)
 
-                    raise NotImplementedError
-                else:
-                    outputs = model(
-                        input_ids, attention_mask=input_ids.ne(tokenizer.pad_token_id), 
-                        labels=decoder_label_ids,
-                    )
-                    loss = outputs.loss
-                    ppl = torch.exp(loss)
+                scores = model(inputs, lengths)
 
+                classification_targets = model.convert_tokenIds_to_strategyIds(decoder_strategy_ids)
+                classification_targets = torch.tensor(classification_targets).to(args.device)
+                # expanded_labels = classification_targets.unsqueeze(1).expand(-1, scores.shape[1]) # batch x seq
+                # length_mask = pad_mask(lengths).permute(1, 0) # batch x seq
+                loss = criterion(
+                    scores, 
+                    classification_targets
+                )
 
-            # if not args.no_cuda and args.n_gpu >= 1:
-            #     loss = loss.mean()  # mean() to average on multi-gpu parallel training
-            #     ppl = ppl.mean()
 
             if args.gradient_accumulation_steps > 1:
                 loss = loss / args.gradient_accumulation_steps
@@ -338,20 +296,11 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
                 with amp.scale_loss(loss, optimizer) as scaled_loss:
                     scaled_loss.backward()
             else:
-                backward_loss = outputs.loss
-                # backward_loss = outputs.lm_loss
-                # if epoch == 0 or epoch == 1:
-                #     backward_loss = outputs.strategy_loss
-                # else:
-                #     backward_loss = outputs.loss
+                backward_loss = loss
                 backward_loss.backward()
 
             tr_loss += loss.item()
-            tr_ppl += ppl.item()
-            # tr_lm_loss += lm_loss.item()
-            # tr_emo_loss += emo_loss.item()
-            # tr_strategy_loss += strategy_loss.item()
-            # tr_intensity_loss += intensity_loss.item()
+
 
             if (step + 1) % args.gradient_accumulation_steps == 0:
                 if args.fp16:
@@ -378,33 +327,19 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
                         "lr", scheduler.get_last_lr()[0], global_step)
                     tb_writer.add_scalar(
                         "loss", (tr_loss - logging_loss) / args.logging_steps, global_step)
-                    tb_writer.add_scalar(
-                        "ppl", (tr_ppl - logging_ppl) / args.logging_steps, global_step)
-                    logger.info("lr: %f, step: %d, loss: %f, ppl: %f", scheduler.get_last_lr()[0],
+                    logger.info("lr: %f, step: %d, loss: %f", scheduler.get_last_lr()[0],
                                 global_step, (tr_loss - logging_loss) /
-                                args.logging_steps, (tr_ppl - logging_ppl) / args.logging_steps)
+                                args.logging_steps)
 
                     print(
                         "lr: %f, step: %d, loss: %f"%(scheduler.get_last_lr()[0],
                         global_step, (tr_loss - logging_loss) / args.logging_steps)
                     )
 
-                    # logger.info("lr: %f, step: %d, loss: %f, lm_loss: %f, emo_loss: %f, strategy_loss: %f, intensity_loss: %f", scheduler.get_last_lr()[0],
-                    #             global_step, (tr_loss - logging_loss) /
-                    #             args.logging_steps, (tr_lm_loss -
-                    #                                  logging_lm_loss) / args.logging_steps,
-                    #             (tr_emo_loss - logging_emo_loss) / args.logging_steps, (tr_strategy_loss -
-                    #                                                                     logging_strategy_loss) / args.logging_steps,
-                    #             (tr_intensity_loss - logging_intensity_loss) / args.logging_steps)
-
                     logging_loss = tr_loss
-                    logging_ppl = tr_ppl
-                    # logging_lm_loss = tr_lm_loss
-                    # logging_emo_loss = tr_emo_loss
-                    # logging_strategy_loss = tr_strategy_loss
-                    # logging_intensity_loss = tr_intensity_loss
-                    if results['eval_perplexity'] < best_ppl:
-                        best_ppl = results['eval_perplexity']
+
+                    if results['eval_loss'] < best_loss:
+                        best_loss = results['eval_loss']
 
                         checkpoint_prefix = "checkpoint"
 
@@ -413,9 +348,10 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
                         model_to_save = (
                             model.module if hasattr(model, "module") else model
                         )  # Take care of distributed/parallel training
-                        model_to_save.save_pretrained(output_dir)
+                        # model_to_save.save_pretrained(output_dir)
+                        torch.save(model_to_save, os.path.join(
+                            output_dir, "pytorch_model.bin"))
                         tokenizer.save_pretrained(output_dir)
-
                         torch.save(args, os.path.join(
                             output_dir, "training_args.bin"))
                         logger.info(
@@ -442,7 +378,6 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
     print("Train finished~")
     return global_step, tr_loss / global_step
 
-# Evaluation of some model
 
 
 def evaluate(args, model: PreTrainedModel, tokenizer: PreTrainedTokenizer, eval_dataset, prefix="") -> Dict:
@@ -481,6 +416,8 @@ def evaluate(args, model: PreTrainedModel, tokenizer: PreTrainedTokenizer, eval_
     logger.info("  Num examples = %d", len(eval_dataset))
     logger.info("  Batch size = %d", args.eval_batch_size)
     eval_loss = 0.0
+    eval_acc = 0.0
+    eval_f1 = 0.0
     nb_eval_steps = 0
     model.eval()
 
@@ -490,6 +427,8 @@ def evaluate(args, model: PreTrainedModel, tokenizer: PreTrainedTokenizer, eval_
     emo_hits = []
     # strategy_hits_topk = [[] for _ in range(7)]
     strategy_hits = []
+
+    criterion = nn.CrossEntropyLoss().to(args.device)
 
     for batch in tqdm(eval_dataloader, desc="Evaluating..."):
         model.train()
@@ -548,65 +487,47 @@ def evaluate(args, model: PreTrainedModel, tokenizer: PreTrainedTokenizer, eval_
                 # model outputs are always tuple in transformers (see doc)
                 ppl = loss = outputs[0]
             else:
-                outputs = model(
-                    input_ids, attention_mask=input_ids.ne(tokenizer.pad_token_id), 
-                    # decoder_input_ids=decoder_input_ids, 
-                    labels=decoder_label_ids,
-                    # decoder_turn_ids=decoder_turn_ids, decoder_role_ids=decoder_role_ids, turn_ids=turn_ids,
-                    # role_ids=role_ids, decoder_strategy_ids=decoder_strategy_ids, 
-                    # comet_embs=comet_embs, comet_mask=comet_mask, comet_embs_st=comet_embs_st, 
-                    # comet_mask_st=comet_mask_st, emotion=emotion
+                inputs = input_ids.cpu()[:, 1:]
+                inputs[(inputs==args.tokenizer.pad_token_id) | (inputs==-100)] = args.tokenizer.pad_token_id
+                lengths = (inputs!=args.tokenizer.pad_token_id).sum(axis=1)
+                inputs = inputs.to(args.device)
+
+                scores = model(inputs, lengths)
+
+                classification_targets = model.convert_tokenIds_to_strategyIds(decoder_strategy_ids)
+                classification_targets = torch.tensor(classification_targets).to(args.device)
+                # expanded_labels = classification_targets.unsqueeze(1).expand(-1, scores.shape[1]) # batch x seq
+                # length_mask = pad_mask(lengths).permute(1, 0) # batch x seq
+                loss = criterion(
+                    scores, 
+                    classification_targets
                 )
-                loss = outputs.loss
-                # print(outputs)
 
-                # emo_logits = outputs.emo_logits
-                # strategy_logits = outputs.strategy_logits
+                # calculate accuracy and f1
+                preds = scores.max(-1).indices
+                targets = classification_targets
+                acc = (preds==targets).sum().item() / targets.shape[0]
+                f1 = f1_score(targets.cpu(), preds.cpu(), average='micro')
 
-            # print(strategy_logits.argmax(dim=-1))
-            # for idx, emo_logit in enumerate(emo_logits):
-            #     if emo_logit.argmax() == emotion[idx]:
-            #         emo_hits.append(1)
-            #     else:
-            #         emo_hits.append(0)
-
-            # print(decoder_input_ids)
-            # strategy_ids = decoder_input_ids[:, 0] - 54944
-
-            # for idx, strategy_logit in enumerate(strategy_logits):
-            #     if strategy_logit.argmax() == decoder_strategy_ids[idx]:
-            #         strategy_hits.append(1)
-            #     else:
-            #         strategy_hits.append(0)
-
-            # if args.strategy:
-            #     cls_labels_list.extend(decoder_cls_labels.cpu().numpy().tolist())
-            #     strategy_probs.append(torch.nn.functional.softmax(outputs.lm_logits[0, 0, 54945:54945+8], dim=-1).cpu().numpy().tolist())
-
-            # lm_loss = outputs.lm_loss
-            # ppl = torch.exp(loss)
-            num_samples.append(
-                (decoder_label_ids.cpu().numpy() != -100).astype(np.int64).sum()
-            )
-            eval_loss += loss.sum().item() * (decoder_label_ids.cpu().numpy()
-                                                != -100).astype(np.int64).sum()
-
+            eval_loss += loss.item()
+            eval_acc += acc
+            eval_f1 += f1
 
         nb_eval_steps += 1
 
-    eval_loss = eval_loss / sum(num_samples)
-    perplexity = torch.exp(torch.tensor(eval_loss)).item()
-    print("Eval perplexity: ", perplexity)
+    eval_loss = eval_loss / nb_eval_steps
+    eval_acc = eval_acc / nb_eval_steps
+    eval_f1 = eval_f1 / nb_eval_steps
     print("Eval loss: ", eval_loss)
+    print("Eval acc: ", eval_acc)
+    print("Eval f1: ", eval_f1)
     # np_strategy = np.array(strategy_probs)
     # np_cls_labels = np.array(cls_labels_list)
     # result = {"eval_perplexity": perplexity, "eval_emotion_predict_accuracy": sum(emo_hits)/len(emo_hits), "eval_strategy_predict_accuracy": sum(strategy_hits)/len(strategy_hits), "eval_number_of_evaluated_examples": len(emo_hits)}
     result = {
-        "eval_perplexity": perplexity, 
         "eval_loss": eval_loss, 
-        # "eval_emotion_predict_accuracy": sum(emo_hits) / len(emo_hits), 
-        # "eval_strategy_predict_accuracy": sum(strategy_hits) / len(strategy_hits),
-        # "eval_number_of_evaluated_examples": len(emo_hits)
+        "eval_acc": eval_acc,
+        "eval_f1": eval_f1,
     }
     output_eval_file = os.path.join(eval_output_dir, "eval_results.txt")
 
@@ -670,9 +591,6 @@ def generate(args, model):
     strategy_record = []
     strategy_hits_topk = [[] for _ in range(8)]
     for idx, (c_text, comet_row, comet_st_row, st_row) in tqdm(enumerate(zip(chat_texts[:-1], comet[:-1], comet_st[:-1], st_test[:-1])), desc="Testing", total=len(chat_texts[:-1])):
-        if args.DEBUG:
-            if idx > 3:
-                break
         if "EOS" not in c_text:
             continue
         # if idx>=100:
@@ -742,43 +660,21 @@ def generate(args, model):
         # print(input_ids)
 
         if args.generate_strategy:
-            strategy = model.generate_strategy(input_ids, next_strategy_id, args, **paras)
-            
+            strategies = model.generate_strategy(input_ids, next_strategy_id, use_gts=args.use_gts_strategy, **paras)
             # strategies = tokenizer.encode(tokenizer.decode(strategies))[:-1]
             # strategies = torch.tensor(strategies, dtype=torch.long).to(args.device)
             # append strategy to input_ids
             # input_ids = torch.cat([input_ids.squeeze(), strategies]).unsqueeze(0)
-
-            if args.use_fudge:
-                # load fudge model
-                conditioning_model = torch.load(args.fudge_model_path + "/pytorch_model.bin")
-                conditioning_model.to(args.device)
-                conditioning_model.eval()
-
-                # get strategy idx
-                target_attr_idx = STRATEGY2ID[tokenizer.decode(strategy, skip_special_tokens=True)]
-
-                chat_history_ids = model.generate_fudge(
-                    input_ids, model, tokenizer, 
-                    conditioning_model, target_attr_idx,
-                    decoder_start_token_id = strategy.item(),
-                    precondition_topk=200, length_cutoff=512, 
-                    condition_lambda=1.0, 
-                    # condition_lambda=0.0, 
-                    device=args.device
-                )
-                # raise NotImplementedError
-            else:
-                chat_history_ids = model.generate(
-                    input_ids,
-                    decoder_start_token_id = strategy,
-                    # **paras, 
-                    max_length=100,min_length=5,num_beams=1,
-                    pad_token_id=tokenizer.pad_token_id,use_cache=True,
-                    eos_token_id=tokenizer.eos_token_id, temperature=0.7,
-                    top_p=0.3, top_k = 30, do_sample=True, repetition_penalty=1.03
-                ) #top_p 0.9, topk 30
-                # raise NotImplementedError
+            chat_history_ids = model.generate(
+                input_ids,
+                decoder_start_token_id = strategies,
+                # **paras, 
+                max_length=100,min_length=5,num_beams=1,
+                pad_token_id=tokenizer.pad_token_id,use_cache=True,
+                eos_token_id=tokenizer.eos_token_id, temperature=0.7,
+                top_p=0.3, top_k = 30, do_sample=True, repetition_penalty=1.03
+            ) #top_p 0.9, topk 30
+            # raise NotImplementedError
         else:
             chat_history_ids = model.generate(
                 input_ids,
@@ -871,7 +767,6 @@ def generate(args, model):
 
 
 
-
 def _sorted_checkpoints(args, checkpoint_prefix="checkpoint", use_mtime=False) -> List[str]:
     ordering_and_checkpoint_path = []
 
@@ -912,3 +807,14 @@ def _rotate_checkpoints(args, checkpoint_prefix="checkpoint", use_mtime=False) -
         logger.info(
             "Deleting older checkpoint [{}] due to args.save_total_limit".format(checkpoint))
         shutil.rmtree(checkpoint)
+
+def pad_mask(lengths: torch.LongTensor) -> torch.ByteTensor:
+    """
+    Create a mask of seq x batch where seq = max(lengths), with 0 in padding locations and 1 otherwise. 
+    """
+    # lengths: bs. Ex: [2, 3, 1]
+    max_seqlen = torch.max(lengths)
+    expanded_lengths = lengths.unsqueeze(0).repeat((max_seqlen, 1))  # [[2, 3, 1], [2, 3, 1], [2, 3, 1]]
+    indices = torch.arange(max_seqlen).unsqueeze(1).repeat((1, lengths.size(0))).to(lengths.device)  # [[0, 0, 0], [1, 1, 1], [2, 2, 2]]
+
+    return expanded_lengths > indices  # pad locations are 0. #[[1, 1, 1], [1, 1, 0], [0, 1, 0]]. seqlen x bs
