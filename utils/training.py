@@ -183,8 +183,8 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
         except ValueError:
             logger.info("  Starting fine-tuning.")
 
-    tr_loss, logging_loss, tr_lm_loss, logging_lm_loss, tr_emo_loss, \
-        logging_emo_loss, tr_strategy_loss, logging_strategy_loss, tr_intensity_loss, logging_intensity_loss = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+    tr_loss, logging_loss, tr_lm_loss, logging_lm_loss, \
+        tr_emo_loss, logging_emo_loss, tr_strategy_loss, logging_strategy_loss, tr_intensity_loss, logging_intensity_loss = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
     tr_ppl, logging_ppl = 0.0, 0.0
     best_ppl = 1e8
 
@@ -229,7 +229,7 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
                 continue
 
             input_ids, position_ids, turn_ids, role_ids, labels, cls_positions, cls_labels, strategy_ids, decoder_input_ids, decoder_position_ids, decoder_turn_ids, \
-                decoder_role_ids, decoder_labels, decoder_cls_positions, decoder_cls_labels, decoder_strategy_ids, comet_ids, comet_mask, emotion, comet_ids_st, comet_mask_st = batch
+                decoder_role_ids, decoder_labels, decoder_cls_positions, decoder_cls_labels, decoder_strategy_ids, comet_ids, comet_mask, emotion, comet_ids_st, comet_mask_st, comet_by_step_ids, comet_by_step_mask = batch
             
 
             if print_cnt==0:
@@ -281,6 +281,10 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
             #         comet_ids_st, attention_mask=comet_ids_st.ne(tokenizer.pad_token_id))[0][:, 0, :]
             # comet_embs_st = comet_embs_st.view(batch_size, n_attr, -1)
 
+            comet_by_step_ids = comet_by_step_ids.to(args.device)
+            comet_by_step_mask = comet_by_step_mask.to(args.device)
+            
+
             input_ids = input_ids.to(args.device)
             turn_ids = turn_ids.to(args.device)
             role_ids = role_ids.to(args.device)
@@ -309,6 +313,7 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
                         args=args,
                     )
                     lm_loss = outputs.loss
+                    strategy_loss = classifier_loss
                     loss = lm_loss + classifier_loss * args.classifier_alpha
                     ppl = torch.exp(lm_loss)
                     # raise NotImplementedError
@@ -349,9 +354,9 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
 
             tr_loss += loss.item()
             tr_ppl += ppl.item()
-            # tr_lm_loss += lm_loss.item()
+            tr_lm_loss += lm_loss.item()
             # tr_emo_loss += emo_loss.item()
-            # tr_strategy_loss += strategy_loss.item()
+            tr_strategy_loss += strategy_loss.item()
             # tr_intensity_loss += intensity_loss.item()
 
             if (step + 1) % args.gradient_accumulation_steps == 0:
@@ -380,14 +385,24 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
                     tb_writer.add_scalar(
                         "loss", (tr_loss - logging_loss) / args.logging_steps, global_step)
                     tb_writer.add_scalar(
+                        "strategy_loss", (tr_strategy_loss - logging_strategy_loss) / args.logging_steps, global_step
+                    )
+                    tb_writer.add_scalar(
                         "ppl", (tr_ppl - logging_ppl) / args.logging_steps, global_step)
                     logger.info("lr: %f, step: %d, loss: %f, ppl: %f", scheduler.get_last_lr()[0],
                                 global_step, (tr_loss - logging_loss) /
                                 args.logging_steps, (tr_ppl - logging_ppl) / args.logging_steps)
 
+                    # print(
+                    #     "lr: %f, step: %d, loss: %f"%(scheduler.get_last_lr()[0],
+                    #     global_step, (tr_loss - logging_loss) / args.logging_steps)
+                    # )
                     print(
-                        "lr: %f, step: %d, loss: %f"%(scheduler.get_last_lr()[0],
-                        global_step, (tr_loss - logging_loss) / args.logging_steps)
+                        "lr: %f, step: %d, loss: %f, lm_loss: %f, strategy_loss: %f"%(scheduler.get_last_lr()[0],
+                        global_step, 
+                        (tr_loss - logging_loss) / args.logging_steps, 
+                        (tr_lm_loss - logging_lm_loss) / args.logging_steps, 
+                        (tr_strategy_loss - logging_strategy_loss) / args.logging_steps)
                     )
 
                     # logger.info("lr: %f, step: %d, loss: %f, lm_loss: %f, emo_loss: %f, strategy_loss: %f, intensity_loss: %f", scheduler.get_last_lr()[0],
@@ -447,7 +462,7 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
     if args.local_rank in [-1, 0]:
         tb_writer.close()
     print("Train finished~")
-    return global_step, tr_loss / global_step
+    return global_step, tr_loss / global_step, tr_lm_loss / global_step, tr_strategy_loss / global_step, tr_ppl / global_step
 
 # Evaluation of some model
 
@@ -500,7 +515,12 @@ def evaluate(args, model: PreTrainedModel, tokenizer: PreTrainedTokenizer, eval_
 
     for batch in tqdm(eval_dataloader, desc="Evaluating..."):
         model.train()
-        input_ids, position_ids, turn_ids, role_ids, labels, cls_positions, cls_labels, strategy_ids, decoder_input_ids, decoder_position_ids, decoder_turn_ids, decoder_role_ids, decoder_labels, decoder_cls_positions, decoder_cls_labels, decoder_strategy_ids, comet_ids, comet_mask, emotion, comet_ids_st, comet_mask_st = batch
+        input_ids, position_ids, turn_ids, role_ids, labels, \
+            cls_positions, cls_labels, strategy_ids, \
+                decoder_input_ids, decoder_position_ids, decoder_turn_ids, decoder_role_ids,\
+                     decoder_labels, decoder_cls_positions, decoder_cls_labels, decoder_strategy_ids, \
+                        comet_ids, comet_mask, emotion, comet_ids_st, comet_mask_st, \
+                            comet_by_step_ids, comet_by_step_mask = batch
         if input_ids.shape[1] > 512:
             continue
 
@@ -512,6 +532,9 @@ def evaluate(args, model: PreTrainedModel, tokenizer: PreTrainedTokenizer, eval_
         comet_mask = comet_mask.to(args.device)
         comet_ids_st = comet_ids_st.to(args.device)
         comet_mask_st = comet_mask_st.to(args.device)
+
+        comet_by_step_ids = comet_by_step_ids.to(args.device)
+        comet_by_step_mask = comet_by_step_mask.to(args.device)
 
         batch_size, n_attr, len_attr = comet_ids.shape
         comet_ids = comet_ids.view(-1, len_attr)
@@ -555,17 +578,33 @@ def evaluate(args, model: PreTrainedModel, tokenizer: PreTrainedTokenizer, eval_
                 # model outputs are always tuple in transformers (see doc)
                 ppl = loss = outputs[0]
             else:
-                outputs = model(
-                    input_ids, attention_mask=input_ids.ne(tokenizer.pad_token_id), 
-                    # decoder_input_ids=decoder_input_ids, 
-                    labels=decoder_label_ids,
-                    # decoder_turn_ids=decoder_turn_ids, decoder_role_ids=decoder_role_ids, turn_ids=turn_ids,
-                    # role_ids=role_ids, decoder_strategy_ids=decoder_strategy_ids, 
-                    # comet_embs=comet_embs, comet_mask=comet_mask, comet_embs_st=comet_embs_st, 
-                    # comet_mask_st=comet_mask_st, emotion=emotion
-                )
-                loss = outputs.loss
-                # print(outputs)
+                if args.strategy_predictor == "classifier":
+                    outputs, classifier_loss = model.train_with_classifier_loss(
+                        input_ids, attention_mask=input_ids.ne(tokenizer.pad_token_id), 
+                        labels=decoder_label_ids, 
+                        next_strategy_id=decoder_strategy_ids,
+                        args=args,
+                    )
+                    lm_loss = outputs.loss
+                    strategy_loss = classifier_loss
+                    loss = lm_loss + classifier_loss * args.classifier_alpha
+                    ppl = torch.exp(lm_loss)
+                    # raise NotImplementedError
+                elif args.strategy_predictor == "lm":
+                    outputs = model(
+                        input_ids, attention_mask=input_ids.ne(tokenizer.pad_token_id), 
+                        labels=decoder_label_ids,
+                    )
+                    logits = outputs[1]
+
+                    raise NotImplementedError
+                else:
+                    outputs = model(
+                        input_ids, attention_mask=input_ids.ne(tokenizer.pad_token_id), 
+                        labels=decoder_label_ids,
+                    )
+                    loss = outputs.loss
+                    ppl = torch.exp(loss)
 
                 # emo_logits = outputs.emo_logits
                 # strategy_logits = outputs.strategy_logits
@@ -580,11 +619,12 @@ def evaluate(args, model: PreTrainedModel, tokenizer: PreTrainedTokenizer, eval_
             # print(decoder_input_ids)
             # strategy_ids = decoder_input_ids[:, 0] - 54944
 
-            # for idx, strategy_logit in enumerate(strategy_logits):
-            #     if strategy_logit.argmax() == decoder_strategy_ids[idx]:
-            #         strategy_hits.append(1)
-            #     else:
-            #         strategy_hits.append(0)
+            strategy_preds = model.generate_strategy(input_ids, args)
+            for idx, strategy_logit in enumerate(strategy_preds):
+                if strategy_logit.argmax() == decoder_strategy_ids[idx]:
+                    strategy_hits.append(1)
+                else:
+                    strategy_hits.append(0)
 
             # if args.strategy:
             #     cls_labels_list.extend(decoder_cls_labels.cpu().numpy().tolist())
@@ -595,7 +635,7 @@ def evaluate(args, model: PreTrainedModel, tokenizer: PreTrainedTokenizer, eval_
             num_samples.append(
                 (decoder_label_ids.cpu().numpy() != -100).astype(np.int64).sum()
             )
-            eval_loss += loss.sum().item() * (decoder_label_ids.cpu().numpy()
+            eval_loss += lm_loss.sum().item() * (decoder_label_ids.cpu().numpy()
                                                 != -100).astype(np.int64).sum()
 
 
@@ -612,7 +652,7 @@ def evaluate(args, model: PreTrainedModel, tokenizer: PreTrainedTokenizer, eval_
         "eval_perplexity": perplexity, 
         "eval_loss": eval_loss, 
         # "eval_emotion_predict_accuracy": sum(emo_hits) / len(emo_hits), 
-        # "eval_strategy_predict_accuracy": sum(strategy_hits) / len(strategy_hits),
+        "eval_strategy_predict_accuracy": sum(strategy_hits) / len(strategy_hits),
         # "eval_number_of_evaluated_examples": len(emo_hits)
     }
     output_eval_file = os.path.join(eval_output_dir, "eval_results.txt")
@@ -664,7 +704,7 @@ def generate(args, model):
     #     comet = f.read().split("\n")
     # with open(args.data_path+"/" + args.situation_test_file_name, "r", encoding="utf-8") as f:
     #     st_test = f.read().split("\n")
-    chat_texts, st_test, comet, comet_st = read_data_files(args, split="test")
+    chat_texts, st_test, comet, comet_st, comet_by_step = read_data_files(args, split="test")
 
     assert len(comet) == len(chat_texts) == len(comet_st)
     gts = []
@@ -677,7 +717,7 @@ def generate(args, model):
     strategy_hits = []
     strategy_record = []
     strategy_hits_topk = [[] for _ in range(8)]
-    for idx, (c_text, comet_row, comet_st_row, st_row) in tqdm(enumerate(zip(chat_texts[:-1], comet[:-1], comet_st[:-1], st_test[:-1])), desc="Testing", total=len(chat_texts[:-1])):
+    for idx, (c_text, comet_row, comet_st_row, st_row, comet_by_step_row) in tqdm(enumerate(zip(chat_texts[:-1], comet[:-1], comet_st[:-1], st_test[:-1], comet_by_step[:-1])), desc="Testing", total=len(chat_texts[:-1])):
         if args.DEBUG:
             if idx > 3:
                 break
@@ -690,7 +730,7 @@ def generate(args, model):
         # gts.append(" ".join(tokens[1:]))
         # = max(tokenizer.encode(tokens[0]))
         chat_history = c_text
-        f = args.test_dataset.construct_conv_ESD(idx, chat_history, comet_row, comet_st_row, st_row, tokenizer, eos = True, pad=False, cls=False, strategy=False, generation=True, add_situ=False)
+        f = args.test_dataset.construct_conv_ESD(idx, chat_history, comet_row, comet_st_row, st_row, tokenizer, comet_by_step_row, eos = True, pad=False, cls=False, strategy=False, generation=True, add_situ=False)
         if len(f.input_ids) >= args.block_size:
             f.input_ids = f.input_ids[-args.block_size:]
             f.input_ids[0] = tokenizer.encode(tokenizer.cls_token)[0]
@@ -750,7 +790,7 @@ def generate(args, model):
         # print(input_ids)
 
         if args.generate_strategy:
-            strategy = model.generate_strategy(input_ids, next_strategy_id, args, **paras)
+            strategy = model.generate_strategy(input_ids, args, next_strategy_id, **paras)
             
             # strategies = tokenizer.encode(tokenizer.decode(strategies))[:-1]
             # strategies = torch.tensor(strategies, dtype=torch.long).to(args.device)

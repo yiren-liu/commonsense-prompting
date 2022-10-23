@@ -51,7 +51,7 @@ class Args():
         self.d_model = 300
         # self.d_model = 600
 
-        TAG = 'baseline'
+        TAG = 'BERT'
         TAG += '__d_model__' + str(self.d_model)
         self.output_dir = os.path.join('checkpoints', 'predictor', TAG)
         # self.generation_dir = os.path.join('outputs', 'bart_generated', TAG)
@@ -83,6 +83,17 @@ class Args():
 
         self.target_model_path = './checkpoints/bart/baseline'
         self.model_cache_dir = f'./cached/models/predictor/{TAG}'
+
+        DEBUG = False
+        # DEBUG = True
+        if DEBUG:
+            self.per_gpu_eval_batch_size = 4
+            self.per_gpu_train_batch_size = 4
+            self.data_path = "./data/dataset/sample_100"
+            self.data_cache_dir = './cached/data/bert_predictor/debug_100'
+            self.num_train_epochs = 2
+            self.logging_steps = 10
+            self.save_steps = 10
 
 
 

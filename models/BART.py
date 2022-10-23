@@ -75,7 +75,7 @@ class BartATOMIC2020(BartForConditionalGeneration):
         loss_classifier = self.strategy_criterion(output_classifier, tgt_ids)
         return output_lm, loss_classifier
 
-    def generate_strategy(self, input_ids, next_strategy_id, args, **kwargs):
+    def generate_strategy(self, input_ids, args, next_strategy_id=None, **kwargs):
         # input_ids: [batch_size, seq_len]
         # next_strategy_id: [batch_size, 1]
         # use_gts: whether to use ground truth strategy
@@ -99,7 +99,7 @@ class BartATOMIC2020(BartForConditionalGeneration):
             if not self.strategy_classifier:
                 if not os.path.exists(args.load_dir + "/strategy_classifier.bin"):
                     raise ValueError("Classifier model does not exist. Please train it first.")
-                classifier = torch.load(args.load_dir + "/strategy_classifier.bin").to(args.device)
+                self.strategy_classifier = torch.load(args.load_dir + "/strategy_classifier.bin").to(args.device)
             strategy_ids = args.tokenizer.convert_tokens_to_ids(self.strategy_tokens)
 
             with torch.no_grad():
@@ -107,7 +107,7 @@ class BartATOMIC2020(BartForConditionalGeneration):
                     input_ids=input_ids,
                     output_hidden_states=True, **kwargs
                 )
-                classifier_logits = classifier(output_lm.encoder_last_hidden_state)
+                classifier_logits = self.strategy_classifier(output_lm.encoder_last_hidden_state)
                 max_strategy_logits, max_strategy_ids = torch.max(classifier_logits, dim=1)
                 best_strategy_ids = strategy_ids[max_strategy_ids]
             # raise NotImplementedError

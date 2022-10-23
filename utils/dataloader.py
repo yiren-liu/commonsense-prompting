@@ -2,6 +2,7 @@ import os
 import pickle
 import logging
 from unittest import skip
+import json
 
 import pandas as pd
 import numpy as np
@@ -348,8 +349,7 @@ class ESDDatasetBlenderbot(Dataset):
 
 
 class ESDDatasetBartCOMET2020(Dataset):
-    def __init__(self, tokenizer: PreTrainedTokenizer, args, df, comet, comet_st, st, 
-    comet_by_step=None, block_size=512, evaluate=False, strategy=True, test=False, add_situ=True):
+    def __init__(self, tokenizer: PreTrainedTokenizer, args, df, comet, comet_st, st, comet_by_step=None, block_size=512, evaluate=False, strategy=True, test=False, add_situ=True):
         block_size = block_size - (tokenizer.model_max_length - tokenizer.max_len_single_sentence)
         self.tokenizer = tokenizer
         self.strategyNull = self.tokenizer.encode('[None]', add_special_tokens=False)[0]
@@ -383,14 +383,24 @@ class ESDDatasetBartCOMET2020(Dataset):
             assert len(df) == len(comet) == len(comet_st)
             self.features = []
             print("loading data from files...")
-            for idx, (row, comet_row, comet_st_row, st_row) in enumerate(tqdm(zip(df[:-1], comet[:-1], comet_st[:-1], st[:-1]), total=len(df[:-1]))):
-                conv = self.construct_conv_ESD(idx, row, comet_row, comet_st_row, st_row, tokenizer, cls=False, strategy=strategy ,evaluate=evaluate, add_situ=add_situ)
-                if len(conv.input_ids) >= block_size:
-                    conv.input_ids = conv.input_ids[-block_size:]
-                    # conv.input_ids[0] = tokenizer.encode(tokenizer.cls_token)[0]
-                # else:
-                #     conv.input_ids = tokenizer.encode(tokenizer.cls_token) + conv.input_ids
-                self.features.append(conv)
+            if comet_by_step:
+                for idx, (row, comet_row, comet_st_row, st_row, comet_by_step) in enumerate(tqdm(zip(df[:-1], comet[:-1], comet_st[:-1], st[:-1], comet_by_step[:-1]), total=len(df[:-1]))):
+                    conv = self.construct_conv_ESD(idx, row, comet_row, comet_st_row, st_row, tokenizer, comet_by_step=comet_by_step, cls=False, strategy=strategy ,evaluate=evaluate, add_situ=add_situ)
+                    if len(conv.input_ids) >= block_size:
+                        conv.input_ids = conv.input_ids[-block_size:]
+                        # conv.input_ids[0] = tokenizer.encode(tokenizer.cls_token)[0]
+                    # else:
+                    #     conv.input_ids = tokenizer.encode(tokenizer.cls_token) + conv.input_ids
+                    self.features.append(conv)
+            else:
+                for idx, (row, comet_row, comet_st_row, st_row) in enumerate(tqdm(zip(df[:-1], comet[:-1], comet_st[:-1], st[:-1]), total=len(df[:-1]))):
+                    conv = self.construct_conv_ESD(idx, row, comet_row, comet_st_row, st_row, tokenizer, cls=False, strategy=strategy ,evaluate=evaluate, add_situ=add_situ)
+                    if len(conv.input_ids) >= block_size:
+                        conv.input_ids = conv.input_ids[-block_size:]
+                        # conv.input_ids[0] = tokenizer.encode(tokenizer.cls_token)[0]
+                    # else:
+                    #     conv.input_ids = tokenizer.encode(tokenizer.cls_token) + conv.input_ids
+                    self.features.append(conv)
 
             # Note that we are loosing the last truncated example here for the sake of simplicity (no padding)
             # If your dataset is small, first you should loook for a bigger one :-) and second you
@@ -402,7 +412,7 @@ class ESDDatasetBartCOMET2020(Dataset):
             logger.info("Finished~")
     
     
-    def construct_conv_ESD(self, idx, row, comet_row, comet_st_row, st_row, tokenizer, eos = True, pad=True, cls=False, evaluate=False, strategy=True, generation=False, add_situ=True):
+    def construct_conv_ESD(self, idx, row, comet_row, comet_st_row, st_row, tokenizer, comet_by_step=None, eos = True, pad=True, cls=False, evaluate=False, strategy=True, generation=False, add_situ=True):
         #  process input text
         # inputs, roles, turns, strategy_labels, _ = self._get_inputs_from_text("EOS".join(row.split("EOS")[:-1]), tokenizer, strategy=strategy, add_gen=True)
         inputs, roles, turns, strategy_labels, _ = self._get_inputs_from_text("EOS".join(row.split("EOS")[:-1]), st_row, tokenizer, strategy=strategy, add_situ=add_situ)
@@ -418,12 +428,56 @@ class ESDDatasetBartCOMET2020(Dataset):
         feature = self._make_feature(idx, inputs, roles, turns, tokenizer.eos_token_id, pad=pad, strategy_labels=strategy_labels, evaluate=evaluate, str_embd=True, generation=generation)
         # make feature for output (decoder input) text
         d_feature = self._make_feature(idx, d_inputs, d_roles, d_turns, tokenizer.eos_token_id, pad=pad, strategy_labels=d_strategy_labels, evaluate=evaluate, str_embd=True, generation=generation)
+
+
         comet_ids, comet_mask = self._get_comet_input(comet_row, tokenizer)
         comet_st_ids, comet_st_mask = self._get_comet_input(comet_st_row, tokenizer, max_num_attr=20)
-        feature = InputFeatures_blender(feature, d_feature, comet_ids, comet_mask, emotion, comet_st_ids, comet_st_mask)
+        
+        if comet_by_step:
+            comet_by_step_ids, comet_by_step_mask = self._get_comet_by_step_input(comet_by_step, tokenizer, max_num_attr=20)
+        else:
+            comet_by_step_ids, comet_by_step_mask = None, None
+        
+        
+        # raise Exception("debug")
+        
+        feature = InputFeatures_blender(feature, d_feature, comet_ids, comet_mask, emotion, comet_st_ids, comet_st_mask, comet_by_step_ids, comet_by_step_mask)
         return feature
 
+    def _get_comet_by_step_input(self, comet_row, tokenizer, max_num_attr=30, max_len_attr=20):
+        attrs = json.loads(comet_row)
+        last_attrs = list(attrs['entailments'].values())[-1]
+        
+        attrs = []
+        for r, t in last_attrs.items():
+            attrs.append(f"[{r}] {t[0]}")
 
+        max_num_attr = min(max_num_attr, len(attrs))
+
+        comet_ids = []
+        comet_mask = []
+        for ids, attr in enumerate(attrs):
+            if ids == max_num_attr:
+                break
+            comet_attr_ids = tokenizer.encode(attr)
+            if len(comet_attr_ids) < max_len_attr:
+                comet_attr_ids += [tokenizer.pad_token_id]*(max_len_attr - len(comet_attr_ids)) 
+            else:
+                comet_attr_ids = comet_attr_ids[:max_len_attr]
+            comet_ids.append(comet_attr_ids)
+            comet_mask.append(1)
+
+        if len(comet_ids) < max_num_attr:
+            comet_ids += ([[tokenizer.pad_token_id]*max_len_attr]) * (max_num_attr - len(comet_ids))
+            comet_mask += [0] * (max_num_attr - len(comet_mask))
+        # print(attrs) 
+        # print(comet_ids)
+        # print(comet_mask)
+        # print(error)
+        
+        assert len(comet_ids) == max_num_attr
+        assert len(comet_mask) == max_num_attr
+        return comet_ids, comet_mask
 
     def _get_comet_input(self, comet_row, tokenizer, max_num_attr=30, max_len_attr=10):
         attrs = comet_row.split('__EOS__')[:-1]
@@ -679,7 +733,14 @@ class ESDDatasetBartCOMET2020(Dataset):
         comet_st_ids = torch.tensor([f.comet_st_ids for f in features], dtype=torch.long)
         comet_st_mask = torch.tensor([f.comet_st_mask for f in features], dtype=torch.long)
 
-        return (input_ids, position_ids, token_type_ids, role_ids, labels, cls_positions, cls_labels, strategy_ids, decoder_input_ids, decoder_position_ids, decoder_token_type_ids, decoder_role_ids, decoder_labels, decoder_cls_positions, decoder_cls_labels, decoder_strategy_ids, comet_ids, comet_mask, emotion, comet_st_ids, comet_st_mask)
+        if features[0].comet_by_step_ids:
+            comet_by_step_ids = torch.tensor([f.comet_by_step_ids for f in features], dtype=torch.long)
+            comet_by_step_mask = torch.tensor([f.comet_by_step_mask for f in features], dtype=torch.long)
+        else:
+            comet_by_step_ids = None
+            comet_by_step_mask = None
+
+        return (input_ids, position_ids, token_type_ids, role_ids, labels, cls_positions, cls_labels, strategy_ids, decoder_input_ids, decoder_position_ids, decoder_token_type_ids, decoder_role_ids, decoder_labels, decoder_cls_positions, decoder_cls_labels, decoder_strategy_ids, comet_ids, comet_mask, emotion, comet_st_ids, comet_st_mask, comet_by_step_ids, comet_by_step_mask)
 
 
 
@@ -1042,7 +1103,7 @@ class InputFeatures_train(object):
 
 
 class InputFeatures_blender(object):
-    def __init__(self, encoder_feature, decoder_feature, comet_ids, comet_mask, emotion, comet_st_ids, comet_st_mask):
+    def __init__(self, encoder_feature, decoder_feature, comet_ids, comet_mask, emotion, comet_st_ids, comet_st_mask, comet_by_step_ids=None, comet_by_step_mask=None):
         self.conv_id = encoder_feature.conv_id
         self.input_ids = encoder_feature.input_ids
         self.position_ids = encoder_feature.position_ids
@@ -1065,6 +1126,8 @@ class InputFeatures_blender(object):
         self.emotion = emotion
         self.comet_st_ids = comet_st_ids
         self.comet_st_mask = comet_st_mask
+        self.comet_by_step_ids = comet_by_step_ids
+        self.comet_by_step_mask = comet_by_step_mask
 
 
 def read_data_files(args, split='eval'):
@@ -1076,4 +1139,7 @@ def read_data_files(args, split='eval'):
         comet = f.read().split("\n")
     with open(args.data_path+"/"+ args.__getitem__(f"situation_{split}_comet_file"), "r", encoding="utf-8") as f:
         comet_st = f.read().split("\n")
-    return chat_texts, st_texts, comet, comet_st
+    with open(args.data_path+"/"+ args.__getitem__(f"cometStep_{split}_file_name"), "r", encoding="utf-8") as f:
+        # this is a jsonl file
+        comet_by_step = f.read().split("\n")
+    return chat_texts, st_texts, comet, comet_st, comet_by_step

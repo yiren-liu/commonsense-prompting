@@ -19,6 +19,7 @@ from transformers import (
 
 from utils.dataloader import ESDDatasetBartCOMET2020
 from models.strategy_predictor.LSTM import LSTM_predictor
+from models.strategy_predictor.BERT import BERT_predictor
 from config_predictor import Args
 from utils.predictor_utils import train, evaluate, generate, set_seed
 
@@ -49,8 +50,12 @@ if __name__ == "__main__":
         args.target_model_path, cache_dir=args.model_cache_dir
     )
     args.tokenizer = tokenizer
+    # model = LSTM_predictor(args, len(tokenizer))
 
-    model = LSTM_predictor(args, len(tokenizer))
+
+    model = BERT_predictor(args)
+    tokenizer = args.tokenizer
+
     
     model.to(args.device)
 
