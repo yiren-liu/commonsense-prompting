@@ -344,12 +344,15 @@ if __name__ == "__main__":
             # convert and dump to jsonl
             with open(f"{dataPath}/{s}CometOnly_{dataName}_ind_allSteps.jsonl", "w", encoding='utf8') as f:
                 for s in results:
-                    for r in results[s]:
-                        f.write(
-                            json.dumps({
-                            "situation": s,
-                            r: results[s][r],
-                        }) + "\n")
+                    # for r in results[s]:
+                    f.write(
+                        json.dumps(
+                            {
+                                "situation": s,
+                                "entailments": results[s],
+                            }
+                        )
+                        + "\n")
         else:
             raise NotImplementedError
             
