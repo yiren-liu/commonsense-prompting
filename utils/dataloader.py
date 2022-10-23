@@ -348,7 +348,8 @@ class ESDDatasetBlenderbot(Dataset):
 
 
 class ESDDatasetBartCOMET2020(Dataset):
-    def __init__(self, tokenizer: PreTrainedTokenizer, args, df, comet, comet_st, st, block_size=512, evaluate=False, strategy=True, test=False, add_situ=True):
+    def __init__(self, tokenizer: PreTrainedTokenizer, args, df, comet, comet_st, st, 
+    comet_by_step=None, block_size=512, evaluate=False, strategy=True, test=False, add_situ=True):
         block_size = block_size - (tokenizer.model_max_length - tokenizer.max_len_single_sentence)
         self.tokenizer = tokenizer
         self.strategyNull = self.tokenizer.encode('[None]', add_special_tokens=False)[0]
@@ -679,6 +680,8 @@ class ESDDatasetBartCOMET2020(Dataset):
         comet_st_mask = torch.tensor([f.comet_st_mask for f in features], dtype=torch.long)
 
         return (input_ids, position_ids, token_type_ids, role_ids, labels, cls_positions, cls_labels, strategy_ids, decoder_input_ids, decoder_position_ids, decoder_token_type_ids, decoder_role_ids, decoder_labels, decoder_cls_positions, decoder_cls_labels, decoder_strategy_ids, comet_ids, comet_mask, emotion, comet_st_ids, comet_st_mask)
+
+
 
 
 
@@ -1064,3 +1067,13 @@ class InputFeatures_blender(object):
         self.comet_st_mask = comet_st_mask
 
 
+def read_data_files(args, split='eval'):
+    with open(args.data_path+"/"+args.__getitem__(f"{split}_file_name"),"r") as f:
+        chat_texts = f.read().split("\n")
+    with open(args.data_path+"/" + args.__getitem__(f"situation_{split}_file_name"), "r", encoding="utf-8") as f:
+        st_texts = f.read().split("\n")
+    with open(args.data_path+"/"+ args.__getitem__(f"{split}_comet_file"), "r", encoding="utf-8") as f:
+        comet = f.read().split("\n")
+    with open(args.data_path+"/"+ args.__getitem__(f"situation_{split}_comet_file"), "r", encoding="utf-8") as f:
+        comet_st = f.read().split("\n")
+    return chat_texts, st_texts, comet, comet_st

@@ -100,8 +100,14 @@ class BartATOMIC2020(BartForConditionalGeneration):
                 if not os.path.exists(args.load_dir + "/strategy_classifier.bin"):
                     raise ValueError("Classifier model does not exist. Please train it first.")
                 classifier = torch.load(args.load_dir + "/strategy_classifier.bin").to(args.device)
+            strategy_ids = args.tokenizer.convert_tokens_to_ids(self.strategy_tokens)
+
             with torch.no_grad():
-                classifier_logits = classifier(input_ids)
+                output_lm = self(
+                    input_ids=input_ids,
+                    output_hidden_states=True, **kwargs
+                )
+                classifier_logits = classifier(output_lm.encoder_last_hidden_state)
                 max_strategy_logits, max_strategy_ids = torch.max(classifier_logits, dim=1)
                 best_strategy_ids = strategy_ids[max_strategy_ids]
             # raise NotImplementedError

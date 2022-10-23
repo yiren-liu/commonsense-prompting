@@ -15,7 +15,7 @@ except ImportError:
 from tqdm import tqdm, trange
 
 
-from utils.dataloader import ESDDatasetBartCOMET2020
+from utils.dataloader import ESDDatasetBartCOMET2020, read_data_files
 from models.BART import BartATOMIC2020, getBartTokenizerATOMIC2020
 from config_bart import Args
 from utils.training import train, evaluate, generate, set_seed
@@ -61,39 +61,28 @@ if __name__ == "__main__":
         os.makedirs(args.output_dir, exist_ok=True)
 
         # Load dataset
-        with open(args.data_path+"/" + args.train_comet_file, "r", encoding="utf-8") as f:
-            comet_trn = f.read().split("\n")
-        with open(args.data_path+"/" + args.situation_train_comet_file, "r", encoding="utf-8") as f:
-            st_comet_trn = f.read().split("\n")
-        with open(args.data_path+"/" + args.train_file_name, "r", encoding="utf-8") as f:
-            df_trn = f.read().split("\n")
-        with open(args.data_path+"/" + args.situation_train_file_name, "r", encoding="utf-8") as f:
-            st_trn = f.read().split("\n")
+        # with open(args.data_path+"/" + args.train_comet_file, "r", encoding="utf-8") as f:
+        #     comet_trn = f.read().split("\n")
+        # with open(args.data_path+"/" + args.situation_train_comet_file, "r", encoding="utf-8") as f:
+        #     st_comet_trn = f.read().split("\n")
+        # with open(args.data_path+"/" + args.train_file_name, "r", encoding="utf-8") as f:
+        #     df_trn = f.read().split("\n")
+        # with open(args.data_path+"/" + args.situation_train_file_name, "r", encoding="utf-8") as f:
+        #     st_trn = f.read().split("\n")
+        df_trn, st_trn, comet_trn, st_comet_trn = read_data_files(args, split="train")
+        df_val, st_val, comet_val, st_comet_val = read_data_files(args, split="eval")
+        df_test, st_test, comet_test, st_comet_test = read_data_files(args, split="test")
 
-        with open(args.data_path+"/" + args.eval_comet_file, "r", encoding="utf-8") as f:
-            comet_val = f.read().split("\n")
-        with open(args.data_path+"/" + args.situation_eval_comet_file, "r", encoding="utf-8") as f:
-            st_comet_val = f.read().split("\n")
-        with open(args.data_path+"/" + args.eval_file_name, "r", encoding="utf-8") as f:
-            df_val = f.read().split("\n")
-        with open(args.data_path+"/" + args.situation_eval_file_name, "r", encoding="utf-8") as f:
-            st_val = f.read().split("\n")
-
-        with open(args.data_path+"/" + args.test_comet_file, "r", encoding="utf-8") as f:
-            comet_test = f.read().split("\n")
-        with open(args.data_path+"/" + args.situation_test_comet_file, "r", encoding="utf-8") as f:
-            st_comet_test = f.read().split("\n")
-        with open(args.data_path+"/" + args.test_file_name, "r", encoding="utf-8") as f:
-            df_test = f.read().split("\n")
-        with open(args.data_path+"/" + args.situation_test_file_name, "r", encoding="utf-8") as f:
-            st_test = f.read().split("\n")
 
         args.train_dataset = ESDDatasetBartCOMET2020(tokenizer, args, df_trn, comet_trn,
-                                        st_comet_trn, st_trn, strategy=args.strategy, evaluate=False, test=False, add_situ=args.context)
+                                        st_comet_trn, st_trn, 
+                                        strategy=args.strategy, evaluate=False, test=False, add_situ=args.context)
         args.eval_dataset = ESDDatasetBartCOMET2020(tokenizer, args, df_val, comet_val,
-                                       st_comet_val, st_val, evaluate=True, strategy=args.strategy, test=False, add_situ=args.context)
+                                       st_comet_val, st_val, 
+                                       evaluate=True, strategy=args.strategy, test=False, add_situ=args.context)
         args.test_dataset = ESDDatasetBartCOMET2020(tokenizer, args, df_test, comet_test,
-                                       st_comet_test, st_test, evaluate=True, strategy=args.strategy, test=True, add_situ=args.context)
+                                       st_comet_test, st_test, 
+                                       evaluate=True, strategy=args.strategy, test=True, add_situ=args.context)
 
         # # Training
         global_step, tr_loss = train(
@@ -111,14 +100,7 @@ if __name__ == "__main__":
         # raise NotImplementedError # figure out the perplexity issue
 
 
-    with open(args.data_path+"/" + args.test_comet_file, "r", encoding="utf-8") as f:
-        comet_test = f.read().split("\n")
-    with open(args.data_path+"/" + args.situation_test_comet_file, "r", encoding="utf-8") as f:
-        st_comet_test = f.read().split("\n")
-    with open(args.data_path+"/" + args.test_file_name, "r", encoding="utf-8") as f:
-        df_test = f.read().split("\n")
-    with open(args.data_path+"/" + args.situation_test_file_name, "r", encoding="utf-8") as f:
-        st_test = f.read().split("\n")
+    df_test, st_test, comet_test, st_comet_test = read_data_files(args, split="test")
     args.test_dataset = ESDDatasetBartCOMET2020(tokenizer, args, df_test, comet_test,
                                     st_comet_test, st_test, evaluate=True, strategy=args.strategy, test=True, add_situ=args.context)
 

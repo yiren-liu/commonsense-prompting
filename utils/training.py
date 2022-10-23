@@ -33,6 +33,7 @@ except ImportError:
 from tqdm import tqdm, trange
 
 from utils.evaluation import summary, Metric
+from utils.dataloader import read_data_files
 
 logger = logging.getLogger()
 
@@ -655,14 +656,15 @@ def generate(args, model):
 
     set_seed(args)
 
-    with open(args.data_path+"/"+args.test_file_name,"r") as f:
-        chat_texts = f.read().split("\n")
-    with open(args.data_path+"/"+ args.situation_test_comet_file, "r", encoding="utf-8") as f:
-        comet_st = f.read().split("\n")
-    with open(args.data_path+"/"+ args.test_comet_file, "r", encoding="utf-8") as f:
-        comet = f.read().split("\n")
-    with open(args.data_path+"/" + args.situation_test_file_name, "r", encoding="utf-8") as f:
-        st_test = f.read().split("\n")
+    # with open(args.data_path+"/"+args.test_file_name,"r") as f:
+    #     chat_texts = f.read().split("\n")
+    # with open(args.data_path+"/"+ args.situation_test_comet_file, "r", encoding="utf-8") as f:
+    #     comet_st = f.read().split("\n")
+    # with open(args.data_path+"/"+ args.test_comet_file, "r", encoding="utf-8") as f:
+    #     comet = f.read().split("\n")
+    # with open(args.data_path+"/" + args.situation_test_file_name, "r", encoding="utf-8") as f:
+    #     st_test = f.read().split("\n")
+    chat_texts, st_test, comet, comet_st = read_data_files(args, split="test")
 
     assert len(comet) == len(chat_texts) == len(comet_st)
     gts = []
