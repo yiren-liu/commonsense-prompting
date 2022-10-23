@@ -6,7 +6,6 @@ from transformers import (
     RobertaForSequenceClassification,
     RobertaConfig,
     RobertaTokenizer,
-    cached_path,
 )
 
 STRATEGYLIST = [
