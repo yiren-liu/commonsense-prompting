@@ -7,7 +7,7 @@ import argparse
 import numpy as np
 from tqdm import tqdm
 from pathlib import Path
-from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+from transformers import BartForConditionalGeneration, AutoTokenizer
 
 
 from utils.comet_utils import use_task_specific_params, trim_batch
@@ -26,7 +26,7 @@ class Comet:
     def __init__(self, model_path):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         # self.device = "cpu"
-        self.model = AutoModelForSeq2SeqLM.from_pretrained(model_path).to(self.device)
+        self.model:BartForConditionalGeneration = BartForConditionalGeneration.from_pretrained(model_path).to(self.device)
         self.tokenizer = AutoTokenizer.from_pretrained(model_path)
         task = "summarization"
         use_task_specific_params(self.model, task)
@@ -52,12 +52,17 @@ class Comet:
                 batch = self.tokenizer(batch, return_tensors="pt", truncation=True, padding="max_length").to(self.device)
                 input_ids, attention_mask = trim_batch(**batch, pad_token_id=self.tokenizer.pad_token_id)
 
+                # avoid none
+                bad_words_ids = [[self.tokenizer.encode(bad_word, add_special_tokens=False)[0]] \
+                    for bad_word in [" none", "none", "None", "NONE", "help", " help", "sad", " sad"]]
                 summaries = self.model.generate(
                     input_ids=input_ids,
                     attention_mask=attention_mask,
                     decoder_start_token_id=self.decoder_start_token_id,
                     num_beams=num_generate,
                     num_return_sequences=num_generate,
+                    do_sample=True,
+                    bad_words_ids=bad_words_ids,
                 )
 
                 dec = self.tokenizer.batch_decode(summaries, skip_special_tokens=True, clean_up_tokenization_spaces=False)
@@ -258,6 +263,9 @@ if COMET_REL_ONLY:
 DEBUG = False
 # DEBUG = True
 
+ONLY_LAST = True # only decode the last utterance
+
+
 # TODO: add dialogue summarization
 
 
@@ -304,7 +312,7 @@ if __name__ == "__main__":
             situations = []
             cnt = 0
             for line in f:
-                if DEBUG and cnt > 10: break
+                if DEBUG and cnt > 3: break
                 # situations.append(line.strip())
                 uttrs = [uttr.strip() for uttr in line.strip().split(' EOS') if uttr]
                 situations.append(uttrs)
@@ -317,6 +325,7 @@ if __name__ == "__main__":
             queries = []
             situRel = [] # [(s, r), ...]
             for situ in situations:
+                if ONLY_LAST: situ = [situ[-1]]
                 for i in range(len(situ)):
                     for r in comet_only_relations:
                         # take conversations upto i
@@ -342,17 +351,20 @@ if __name__ == "__main__":
             results = temp
 
             # convert and dump to jsonl
-            with open(f"{dataPath}/{s}CometOnly_{dataName}_ind_allSteps.jsonl", "w", encoding='utf8') as f:
+            tag = "allSteps"
+            if ONLY_LAST: tag = "lastStep"
+            with open(f"{dataPath}/{s}CometOnly_{dataName}_ind_{tag}.jsonl", "w", encoding='utf8') as f:
                 for s in results:
                     # for r in results[s]:
                     f.write(
-                        json.dumps(
-                            {
-                                "situation": s,
-                                "entailments": results[s],
-                            }
+                            json.dumps(
+                                {
+                                    "situation": s,
+                                    "entailments": results[s],
+                                }
+                            )
+                            + "\n"
                         )
-                        + "\n")
         else:
             raise NotImplementedError
             
