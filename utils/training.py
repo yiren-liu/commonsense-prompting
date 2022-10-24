@@ -808,6 +808,9 @@ def generate(args, model):
                     model.fudge_model = conditioning_model
 
                 # get strategy idx
+                strategy_vocab_ids = tokenizer.encode(list(STRATEGY2ID.keys()), add_special_tokens=False)
+                if strategy not in strategy_vocab_ids:
+                    strategy = torch.tensor([strategy_vocab_ids[0]], dtype=torch.long).to(args.device)
                 target_attr_idx = STRATEGY2ID[tokenizer.decode(strategy, skip_special_tokens=True)]
 
                 chat_history_ids = model.generate_fudge(
@@ -816,6 +819,7 @@ def generate(args, model):
                     decoder_start_token_id = strategy.item(),
                     precondition_topk=200, length_cutoff=512, 
                     condition_lambda=1.0, 
+                    # condition_lambda=0.5, 
                     # condition_lambda=0.0, 
                     device=args.device
                 )
@@ -842,12 +846,12 @@ def generate(args, model):
 
             if args.use_fudge:
                 # strategy = chat_history_ids[:, -1]
-                # strategy_vocab_ids = tokenizer.encode(list(STRATEGY2ID.keys()), add_special_tokens=False)
-                # if strategy not in strategy_vocab_ids:
-                #     strategy = torch.tensor([strategy_vocab_ids[0]], dtype=torch.long).to(args.device)
 
                 strategy = model.generate_strategy(input_ids, args, next_strategy_id, **paras)
-                
+                strategy_vocab_ids = tokenizer.encode(list(STRATEGY2ID.keys()), add_special_tokens=False)
+                if strategy not in strategy_vocab_ids:
+                    strategy = torch.tensor([strategy_vocab_ids[0]], dtype=torch.long).to(args.device)
+
 
                 # load fudge model
                 if model.fudge_model is None:
