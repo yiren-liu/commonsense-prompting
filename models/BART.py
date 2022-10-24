@@ -36,6 +36,7 @@ class BartATOMIC2020(BartForConditionalGeneration):
         ]
         self.strategy_classifier = None
         self.strategy_criterion = torch.nn.CrossEntropyLoss()
+        self.fudge_model = None
 
     def forward(self, input_ids=None, attention_mask=None, labels=None, **kwargs):
         # model(input_ids, attention_mask=input_ids.ne(tokenizer.pad_token_id),
@@ -129,11 +130,11 @@ class BartATOMIC2020(BartForConditionalGeneration):
 
 
 
-    def generate_fudge(self, encoder_input_ids, model, tokenizer, conditioning_model, target_attr_idx, decoder_start_token_id=None, precondition_topk=200, length_cutoff=512, condition_lambda=1.0, device='cuda'):
+    def generate_fudge(self, encoder_input_ids, model, tokenizer, target_attr_idx, decoder_start_token_id=None, precondition_topk=200, length_cutoff=512, condition_lambda=1.0, device='cuda'):
         results = predict_formality(
             model,
             tokenizer,
-            conditioning_model,
+            self.fudge_model,
             target_attr_idx,
             encoder_input_ids,
             decoder_start_token_id=decoder_start_token_id,

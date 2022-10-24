@@ -801,16 +801,18 @@ def generate(args, model):
 
             if args.use_fudge:
                 # load fudge model
-                conditioning_model = torch.load(args.fudge_model_path + "/pytorch_model.bin")
-                conditioning_model.to(args.device)
-                conditioning_model.eval()
+                if model.fudge_model is None:
+                    conditioning_model = torch.load(args.fudge_model_path + "/pytorch_model.bin")
+                    conditioning_model.to(args.device)
+                    conditioning_model.eval()
+                    model.fudge_model = conditioning_model
 
                 # get strategy idx
                 target_attr_idx = STRATEGY2ID[tokenizer.decode(strategy, skip_special_tokens=True)]
 
                 chat_history_ids = model.generate_fudge(
                     input_ids, model, tokenizer, 
-                    conditioning_model, target_attr_idx,
+                    target_attr_idx,
                     decoder_start_token_id = strategy.item(),
                     precondition_topk=200, length_cutoff=512, 
                     condition_lambda=1.0, 
@@ -846,16 +848,18 @@ def generate(args, model):
 
                 
                 # load fudge model
-                conditioning_model = torch.load(args.fudge_model_path + "/pytorch_model.bin")
-                conditioning_model.to(args.device)
-                conditioning_model.eval()
+                if model.fudge_model is None:
+                    conditioning_model = torch.load(args.fudge_model_path + "/pytorch_model.bin")
+                    conditioning_model.to(args.device)
+                    conditioning_model.eval()
+                    model.fudge_model = conditioning_model
 
                 # get strategy idx
                 target_attr_idx = STRATEGY2ID[tokenizer.decode(strategy, skip_special_tokens=True)]
 
                 chat_history_ids = model.generate_fudge(
                     input_ids, model, tokenizer, 
-                    conditioning_model, target_attr_idx,
+                    target_attr_idx,
                     decoder_start_token_id = strategy.item(),
                     precondition_topk=200, length_cutoff=512, 
                     condition_lambda=1.0, 
