@@ -10,6 +10,7 @@ from transformers import (
 
 from utils.fudge_utils import predict_formality
 from models.strategy_predictor.Linear import BART_linear_predictor
+from models.strategy_predictor.BERT import BERT_predictor
 
 def getBartTokenizerATOMIC2020(args):
     tokenizer = BartTokenizer.from_pretrained(
@@ -109,6 +110,18 @@ class BartATOMIC2020(BartForConditionalGeneration):
                 )
                 classifier_logits = self.strategy_classifier(output_lm.encoder_last_hidden_state)
                 max_strategy_logits, max_strategy_ids = torch.max(classifier_logits, dim=1)
+                best_strategy_ids = torch.LongTensor(strategy_ids).to(args.device)[max_strategy_ids]
+            return best_strategy_ids
+        elif args.strategy_predictor == "bert_classifier":
+            if not self.strategy_classifier:
+                if not os.path.exists(args.pretrained_predictor_dir):
+                    raise ValueError("BERT Classifier model does not exist. Please train it first.")
+                self.strategy_classifier = BERT_predictor(args).to(args.device)
+            strategy_ids = args.tokenizer.convert_tokens_to_ids(self.strategy_tokens)
+
+            with torch.no_grad():
+                logits = self.strategy_classifier(input_ids)
+                max_strategy_logits, max_strategy_ids = torch.max(logits, dim=1)
                 best_strategy_ids = torch.LongTensor(strategy_ids).to(args.device)[max_strategy_ids]
             return best_strategy_ids
         else:

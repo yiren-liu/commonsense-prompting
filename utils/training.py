@@ -317,7 +317,7 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
                     loss = lm_loss + classifier_loss * args.classifier_alpha
                     ppl = torch.exp(lm_loss)
                     # raise NotImplementedError
-                elif args.strategy_predictor == "lm":
+                elif args.strategy_predictor == "lm" or args.strategy_predictor == "bert_classifier":
                     outputs = model(
                         input_ids, attention_mask=input_ids.ne(tokenizer.pad_token_id), 
                         labels=decoder_label_ids,
@@ -592,7 +592,7 @@ def evaluate(args, model: PreTrainedModel, tokenizer: PreTrainedTokenizer, eval_
                     loss = lm_loss + classifier_loss * args.classifier_alpha
                     ppl = torch.exp(lm_loss)
                     # raise NotImplementedError
-                elif args.strategy_predictor == "lm":
+                elif args.strategy_predictor == "lm" or args.strategy_predictor == "bert_classifier":
                     outputs = model(
                         input_ids, attention_mask=input_ids.ne(tokenizer.pad_token_id), 
                         labels=decoder_label_ids,
