@@ -107,10 +107,15 @@ class Args():
         self.cometStep_train_file_name = "trainCometOnly_DialogueHistory_ind_lastStep.jsonl"
         self.cometStep_eval_file_name = "devCometOnly_DialogueHistory_ind_lastStep.jsonl"
         self.cometStep_test_file_name = "testCometOnly_DialogueHistory_ind_lastStep.jsonl"
-        self.append_comet_to_input = True
+        # self.append_comet_to_input = True
+        self.append_comet_to_input = False
 
-        # self.data_cache_dir = './cached/data/bart/add_context_add_strategy'
-        self.data_cache_dir = './cached/data/bart/add_context_add_strategy_add_cometStep'
+        if self.append_comet_to_input:
+            self.data_cache_dir = './cached/data/bart/add_context_add_strategy_add_cometStep'
+        else:
+            self.data_cache_dir = './cached/data/bart/add_context_add_strategy'
+        
+        
         self.do_train = True
         # self.do_train = False
         self.load_dir = os.path.join('checkpoints', 'bart', TAG)
