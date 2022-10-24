@@ -96,7 +96,8 @@ class Args():
         self.classifier_alpha = 1.0
         # self.d_model = 768
         self.d_model = 1024
-        self.use_fudge = True
+        # self.use_fudge = True
+        self.use_fudge = False
 
         self.situation_train_file_name = "trainSituation.txt"
         self.situation_eval_file_name = "devSituation.txt"
@@ -107,11 +108,14 @@ class Args():
         self.cometStep_eval_file_name = "devCometOnly_DialogueHistory_ind_lastStep.jsonl"
         self.cometStep_test_file_name = "testCometOnly_DialogueHistory_ind_lastStep.jsonl"
         
-        
+
         TAG = 'genStrategyWithGold'
 
-        # self.append_comet_to_input = True
-        self.append_comet_to_input = False
+        self.overwrite_cache = True
+        self.append_comet_to_input = True
+        # self.append_comet_to_input = False
+        # self.use_comet_template = False
+        self.use_comet_template = True
 
 
         if self.append_comet_to_input:
