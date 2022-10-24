@@ -791,7 +791,7 @@ def generate(args, model):
         # print(tokenizer.decode(input_ids[0]))
         # print(input_ids)
 
-        if args.generate_strategy:
+        if args.generate_strategy and args.strategy_predictor != "lm":
             strategy = model.generate_strategy(input_ids, args, next_strategy_id, **paras)
             
             # strategies = tokenizer.encode(tokenizer.decode(strategies))[:-1]
