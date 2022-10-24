@@ -20,19 +20,23 @@ class BERT_predictor(nn.Module):
         self.strategy2id = args.strategy2id
         self.tokenizer = args.tokenizer
 
-        self.bert = RobertaForSequenceClassification.from_pretrained(
-            'roberta-base', num_labels=len(self.strategy2id), cache_dir=args.model_cache_dir
-        ).to(args.device)
-        args.tokenizer = RobertaTokenizer.from_pretrained(
-            'roberta-base', cache_dir=args.model_cache_dir
-        )
-        additional_special_tokens = [
-            "[Question]", "[Reflection of feelings]", "[Information]", "[Restatement or Paraphrasing]",
-            "[Others]", "[Self-disclosure]", "[Affirmation and Reassurance]", "[Providing Suggestions]",
-            "[None]"
-        ]
-        args.tokenizer.add_tokens(additional_special_tokens)
-        self.bert.resize_token_embeddings(len(args.tokenizer))
+        if args.pretrained_predictor_dir:
+            self.bert = torch.load(args.pretrained_predictor_dir + "/pytorch_model.bin").to(args.device)
+            pass
+        else:
+            self.bert = RobertaForSequenceClassification.from_pretrained(
+                'roberta-base', num_labels=len(self.strategy2id), cache_dir=args.model_cache_dir
+            ).to(args.device)
+            args.tokenizer = RobertaTokenizer.from_pretrained(
+                'roberta-base', cache_dir=args.model_cache_dir
+            )
+            additional_special_tokens = [
+                "[Question]", "[Reflection of feelings]", "[Information]", "[Restatement or Paraphrasing]",
+                "[Others]", "[Self-disclosure]", "[Affirmation and Reassurance]", "[Providing Suggestions]",
+                "[None]"
+            ]
+            args.tokenizer.add_tokens(additional_special_tokens)
+            self.bert.resize_token_embeddings(len(args.tokenizer))
         
     
     def convert_tokenIds_to_strategyIds(self, token_ids):
@@ -55,5 +59,9 @@ class BERT_predictor(nn.Module):
         lengths: lengths of inputs; batch
         output: batch x classes
         """
-        logits = self.bert(inputs).logits
+        outputs = self.bert(inputs)
+        if isinstance(outputs, torch.Tensor):
+            logits = outputs
+        else:
+            logits = outputs.logits
         return logits

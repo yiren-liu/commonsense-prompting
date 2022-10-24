@@ -418,7 +418,7 @@ class ESDDatasetBartCOMET2020(Dataset):
         # inputs, roles, turns, strategy_labels, _ = self._get_inputs_from_text("EOS".join(row.split("EOS")[:-1]), tokenizer, strategy=strategy, add_gen=True)
         inputs, roles, turns, strategy_labels, _ = self._get_inputs_from_text("EOS".join(row.split("EOS")[:-1]), st_row, tokenizer, comet_by_step, strategy=strategy, add_situ=add_situ)
         # process output (decoder input) text
-        d_inputs, d_roles, d_turns, d_strategy_labels, emotion = self._get_inputs_from_text(row.split("EOS")[-1], st_row, tokenizer, strategy=True, add_situ=False, sos=False)
+        d_inputs, d_roles, d_turns, d_strategy_labels, emotion = self._get_inputs_from_text(row.split("EOS")[-1], st_row, tokenizer, add_role=False, strategy=True, add_situ=False, sos=False)
         
         
         # print("EOS".join(row.split("EOS")[:-1]))
@@ -509,7 +509,7 @@ class ESDDatasetBartCOMET2020(Dataset):
         assert len(comet_mask) == max_num_attr
         return comet_ids, comet_mask
 
-    def _get_inputs_from_text(self, text, st_row, tokenizer, comet_by_step=None, strategy=False, cls = False, add_gen=False, add_situ=False, sos=True):
+    def _get_inputs_from_text(self, text, st_row, tokenizer, comet_by_step=None, add_role=True, strategy=False, cls = False, add_gen=False, add_situ=False, sos=True):
         srcs = text.strip()
         inputs = []
         roles = []
@@ -547,10 +547,11 @@ class ESDDatasetBartCOMET2020(Dataset):
                 emotion = src_emo
 
             # adding role prompt
-            if src_role == 0:
-                src = "PersonX: " + src
-            elif src_role == 1:
-                src = "PersonY: " + src
+            if add_role:
+                if src_role == 0:
+                    src = "PersonX: " + src
+                elif src_role == 1:
+                    src = "PersonY: " + src
 
             context_id = tokenizer.encode(src)
             if not sos: context_id = context_id[1:]

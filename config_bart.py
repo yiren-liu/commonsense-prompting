@@ -95,8 +95,8 @@ class Args():
         self.turn = False
         self.role = False
 
-        # self.DEBUG = True
-        self.DEBUG = False
+        self.DEBUG = True
+        # self.DEBUG = False
 
 
         # TAG = 'genStrategyWithGold'
@@ -105,14 +105,14 @@ class Args():
 
         # TAG = 'genStrategyWithClassifier'
         self.generate_strategy = True
-        self.strategy_predictor = "lm"
+        # self.strategy_predictor = "lm"
+        self.strategy_predictor = "bert_classifier"
         # self.strategy_predictor = "gts"
         # self.strategy_predictor = "classifier"
         self.classifier_alpha = 1.0
         # self.d_model = 768
         self.d_model = 1024
-        # self.use_fudge = True
-        self.use_fudge = False
+
 
         self.situation_train_file_name = "trainSituation.txt"
         self.situation_eval_file_name = "devSituation.txt"
@@ -132,6 +132,12 @@ class Args():
         # TAG = 'baseline_noFUDGE_withAppendCOMET_lm'
         TAG = 'baseline_noFUDGE_withAppendCOMETverbalized_lm'
 
+        # self.pretrained_predictor_dir = None
+        self.pretrained_predictor_dir = os.path.join('checkpoints', 'predictor', 'BERT__d_model__300')
+        self.use_fudge = True
+        # self.use_fudge = False
+
+
         self.overwrite_cache = True
         self.append_comet_to_input = True
         # self.append_comet_to_input = False
@@ -145,8 +151,8 @@ class Args():
             self.data_cache_dir = './cached/data/bart/add_context_add_strategy'
         
         
-        self.do_train = True
-        # self.do_train = False
+        # self.do_train = True
+        self.do_train = False
         self.load_dir = os.path.join('checkpoints', 'bart', TAG)
         # self.load_dir = os.path.join('checkpoints', 'bart', 'baseline')
         self.fudge_model_path = os.path.join('checkpoints', 'FUDGE', 'baseline__d_model__300')
