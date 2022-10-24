@@ -22,6 +22,17 @@ class Args():
         self.situation_eval_comet_file = "devComet_st.txt"
         self.situation_test_comet_file = "testComet_st.txt"
 
+        self.strategy2id = {
+            "[Question]": 0,
+            "[Reflection of feelings]": 1,
+            "[Information]": 2,
+            "[Restatement or Paraphrasing]": 3,
+            "[Others]": 4,
+            "[Self-disclosure]": 5,
+            "[Affirmation and Reassurance]": 6,
+            "[Providing Suggestions]": 7,
+            "[None]": 8,
+        }
 
         self.model_cache_dir = './cached/models/bart-comet2020/'
         # self.model_cache_dir = './cached/models/bart-comet2020/add_contextCOMET'
@@ -73,8 +84,48 @@ class Args():
 
 
 
-        # self.DEBUG = True
-        self.DEBUG = False
+        self.DEBUG = True
+        # self.DEBUG = False
+
+
+        TAG = 'genStrategyWithGold'
+        self.generate_strategy = True
+        self.strategy_predictor = "lm"
+        # self.strategy_predictor = "gts"
+        # self.strategy_predictor = "classifier"
+        self.classifier_alpha = 1.0
+        # self.d_model = 768
+        self.d_model = 1024
+        self.use_fudge = True
+
+        self.situation_train_file_name = "trainSituation.txt"
+        self.situation_eval_file_name = "devSituation.txt"
+        self.situation_test_file_name = "testSituation.txt"
+        # self.data_cache_dir = './cached/data/bart-comet2020/add_context_add_strategy'
+        
+        self.cometStep_train_file_name = "trainCometOnly_DialogueHistory_ind_lastStep.jsonl"
+        self.cometStep_eval_file_name = "devCometOnly_DialogueHistory_ind_lastStep.jsonl"
+        self.cometStep_test_file_name = "testCometOnly_DialogueHistory_ind_lastStep.jsonl"
+        
+        
+        TAG = 'genStrategyWithGold'
+
+        # self.append_comet_to_input = True
+        self.append_comet_to_input = False
+
+
+        if self.append_comet_to_input:
+            self.data_cache_dir = './cached/data/bart-comet2020/add_context_add_strategy_add_cometStep'
+        else:
+            self.data_cache_dir = './cached/data/bart-comet2020/add_context_add_strategy'
+        
+
+        self.do_train = True
+        # self.do_train = False
+        self.load_dir = os.path.join('checkpoints', 'bart', TAG)
+        # self.load_dir = os.path.join('checkpoints', 'bart', 'baseline')
+        self.fudge_model_path = os.path.join('checkpoints', 'FUDGE', 'baseline__d_model__300')
+
 
         if self.DEBUG:       
             self.per_gpu_train_batch_size = 1
@@ -86,46 +137,10 @@ class Args():
             self.config_name = "facebook/bart-base"
             self.tokenizer_name = "facebook/bart-base"
 
-        TAG = 'genStrategyWithGold'
-        self.generate_strategy = True
-        self.use_gts_strategy = True
-        self.situation_train_file_name = "trainSituation.txt"
-        self.situation_eval_file_name = "devSituation.txt"
-        self.situation_test_file_name = "testSituation.txt"
-        self.data_cache_dir = './cached/data/bart-comet2020/add_context_add_strategy'
-        self.do_train = False
-        self.load_dir = os.path.join('checkpoints', 'bart-comet2020', 'baseline')
 
-        # TAG = 'baseline'
-        # self.situation_train_file_name = "trainSituation.txt"
-        # self.situation_eval_file_name = "devSituation.txt"
-        # self.situation_test_file_name = "testSituation.txt"
-        # self.data_cache_dir = './cached/data/bart-comet2020/add_context_add_strategy'
-
-        # TAG = 'relNoConstraint'
-        # self.situation_train_file_name = "trainComet_st_relAll.txt"
-        # self.situation_eval_file_name = "devComet_st_relAll.txt"
-        # self.situation_test_file_name = "testComet_st_relAll.txt"
-        # self.data_cache_dir = './cached/data/bart-comet2020/add_contextCOMET'
-
-        # TAG = 'relConstraint'
-        # self.situation_train_file_name = "trainComet_st_relConstraint.txt"
-        # self.situation_eval_file_name = "devComet_st_relConstraint.txt"
-        # self.situation_test_file_name = "testComet_st_relConstraint.txt"
-        # self.data_cache_dir = './cached/data/bart-comet2020/add_contextCOMET_relConstraint'
-
-
-        # TAG = 'baseline'
-        # TAG = 'relConstraint'
-        # TAG = 'all_data'
-        # TAG = 'sample_0.2'
-        # TAG = 'sample_100'
-        # TAG = 'all_loss'
-        # TAG = 'emotion'
-        # TAG = 'ablation_strategy'
-        # TAG = 'ablation_situation'
-        # TAG = 'ablation_post'
-        # nowtime = '10251756'
         self.output_dir = os.path.join('checkpoints', 'bart-comet2020', TAG)
         self.generation_dir = os.path.join('outputs', 'bart-comet2020_generated', TAG)
- 
+
+
+    def __getitem__(self, name):
+        return getattr(self, name)
