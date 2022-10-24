@@ -98,8 +98,8 @@ class Args():
         self.target_model_path = './checkpoints/bart/baseline'
         self.model_cache_dir = f'./cached/models/predictor/{TAG}'
 
-        # DEBUG = False
-        DEBUG = True
+        DEBUG = False
+        # DEBUG = True
         if DEBUG:
             self.per_gpu_eval_batch_size = 4
             self.per_gpu_train_batch_size = 4

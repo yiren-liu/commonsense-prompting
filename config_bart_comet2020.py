@@ -71,7 +71,7 @@ class Args():
         self.adam_epsilon = 1e-8  # RAW 8
         self.max_grad_norm = 1.0
         # self.num_train_epochs = 8  # raw 10
-        self.num_train_epochs = 4  # raw 10
+        self.num_train_epochs = 2  # raw 10
         self.max_steps = -1
         self.warmup_steps = 120  # raw 120
         self.logging_steps = 100
@@ -98,20 +98,24 @@ class Args():
 
 
 
-        self.DEBUG = True
-        # self.DEBUG = False
+        # self.DEBUG = True
+        self.DEBUG = False
 
 
         # TAG = 'genStrategyWithGold'
         self.generate_strategy = True
-        self.strategy_predictor = "lm"
+        # self.strategy_predictor = "lm"
         # self.strategy_predictor = "gts"
-        # self.strategy_predictor = "classifier"
+
+        # self.strategy_predictor = "bert_classifier"
+        # self.pretrained_predictor_dir = os.path.join('checkpoints', 'predictor', 'BERT__d_model__300')
+
+        self.strategy_predictor = "classifier"
         self.classifier_alpha = 1.0
         # self.d_model = 768
         self.d_model = 1024
-        # self.use_fudge = True
-        self.use_fudge = False
+        self.use_fudge = True
+        # self.use_fudge = False
 
         self.situation_train_file_name = "trainSituation.txt"
         self.situation_eval_file_name = "devSituation.txt"
@@ -124,7 +128,12 @@ class Args():
         
 
         # TAG = 'genStrategyWithGold'
-        TAG = 'baseline_noFUDGE_withAppendCOMET_lm'
+        # TAG = 'baseline_FUDGE_withAppendCOMETverbalized_lm_decodeOnly'
+        # TAG = 'baseline_FUDGE_withAppendCOMETverbalized_bert_classifier_decodeOnly'
+        # TAG = 'baseline_noFUDGE_withAppendCOMETverbalized_Linear_classifier'
+        # TAG = 'baseline_FUDGE_withAppendCOMETverbalized_gts_decodeOnly'
+        TAG = 'baseline_FUDGE_withAppendCOMETverbalized_Linear_classifier_decodeOnly'
+
 
         self.overwrite_cache = True
         self.append_comet_to_input = True
@@ -139,11 +148,13 @@ class Args():
             self.data_cache_dir = './cached/data/bart-comet2020/add_context_add_strategy'
         
 
-        self.do_train = True
-        # self.do_train = False
-        self.load_dir = os.path.join('checkpoints', 'bart-comet2020', TAG)
-        # self.load_dir = os.path.join('checkpoints', 'bart', 'baseline')
-        self.fudge_model_path = os.path.join('checkpoints', 'FUDGE', 'baseline__d_model__300')
+        # self.do_train = True
+        self.do_train = False
+        # self.load_dir = os.path.join('checkpoints', 'bart-comet2020', TAG)
+        # self.load_dir = os.path.join('checkpoints', 'bart-comet2020', 'baseline_noFUDGE_withAppendCOMETverbalized_lm')
+        self.load_dir = os.path.join('checkpoints', 'bart-comet2020', 'baseline_noFUDGE_withAppendCOMETverbalized_Linear_classifier')
+
+        self.fudge_model_path = os.path.join('checkpoints', 'FUDGE', 'bartCOMET__d_model__300')
 
 
         if self.DEBUG:       

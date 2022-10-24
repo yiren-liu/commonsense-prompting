@@ -51,7 +51,8 @@ class Args():
         self.d_model = 300
         # self.d_model = 600
 
-        TAG = 'baseline'
+        # TAG = 'baseline'
+        TAG = 'bartCOMET'
         TAG += '__d_model__' + str(self.d_model)
         self.output_dir = os.path.join('checkpoints', 'FUDGE', TAG)
         # self.generation_dir = os.path.join('outputs', 'bart_generated', TAG)
@@ -81,7 +82,7 @@ class Args():
         self.turn = False
         self.role = False
 
-        self.target_model_path = './checkpoints/bart/baseline'
+        self.target_model_path = './checkpoints/bart-comet2020/baseline_noFUDGE_withAppendCOMETverbalized_lm'
         self.model_cache_dir = f'./cached/models/FUDGE/{TAG}'
 
 
