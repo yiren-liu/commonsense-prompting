@@ -383,7 +383,7 @@ class ESDDatasetBartCOMET2020(Dataset):
             assert len(df) == len(comet) == len(comet_st)
             self.features = []
             print("loading data from files...")
-            if comet_by_step:
+            if comet_by_step and args.append_comet_to_input:
                 for idx, (row, comet_row, comet_st_row, st_row, comet_by_step) in enumerate(tqdm(zip(df[:-1], comet[:-1], comet_st[:-1], st[:-1], comet_by_step[:-1]), total=len(df[:-1]))):
                     conv = self.construct_conv_ESD(idx, row, comet_row, comet_st_row, st_row, tokenizer, comet_by_step=comet_by_step, cls=False, strategy=strategy ,evaluate=evaluate, add_situ=add_situ)
                     if len(conv.input_ids) >= block_size:
@@ -415,7 +415,7 @@ class ESDDatasetBartCOMET2020(Dataset):
     def construct_conv_ESD(self, idx, row, comet_row, comet_st_row, st_row, tokenizer, comet_by_step=None, eos = True, pad=True, cls=False, evaluate=False, strategy=True, generation=False, add_situ=True):
         #  process input text
         # inputs, roles, turns, strategy_labels, _ = self._get_inputs_from_text("EOS".join(row.split("EOS")[:-1]), tokenizer, strategy=strategy, add_gen=True)
-        inputs, roles, turns, strategy_labels, _ = self._get_inputs_from_text("EOS".join(row.split("EOS")[:-1]), st_row, tokenizer, strategy=strategy, add_situ=add_situ)
+        inputs, roles, turns, strategy_labels, _ = self._get_inputs_from_text("EOS".join(row.split("EOS")[:-1]), st_row, tokenizer, comet_by_step, strategy=strategy, add_situ=add_situ)
         # process output (decoder input) text
         d_inputs, d_roles, d_turns, d_strategy_labels, emotion = self._get_inputs_from_text(row.split("EOS")[-1], st_row, tokenizer, strategy=True, add_situ=False, sos=False)
         
@@ -443,6 +443,8 @@ class ESDDatasetBartCOMET2020(Dataset):
         
         feature = InputFeatures_blender(feature, d_feature, comet_ids, comet_mask, emotion, comet_st_ids, comet_st_mask, comet_by_step_ids, comet_by_step_mask)
         return feature
+
+    
 
     def _get_comet_by_step_input(self, comet_row, tokenizer, max_num_attr=30, max_len_attr=20):
         attrs = json.loads(comet_row)
@@ -506,7 +508,7 @@ class ESDDatasetBartCOMET2020(Dataset):
         assert len(comet_mask) == max_num_attr
         return comet_ids, comet_mask
 
-    def _get_inputs_from_text(self, text, st_row, tokenizer, strategy=False, cls = False, add_gen=False, add_situ=False, sos=True):
+    def _get_inputs_from_text(self, text, st_row, tokenizer, comet_by_step=None, strategy=False, cls = False, add_gen=False, add_situ=False, sos=True):
         srcs = text.strip()
         inputs = []
         roles = []
@@ -519,6 +521,14 @@ class ESDDatasetBartCOMET2020(Dataset):
         # if add_gen: srcs += " [GEN]"
         if add_gen: srcs += " Response:"
         if add_situ: srcs = "0 0 0 Context:" + st_row.strip() + " EOS" + srcs
+        if comet_by_step:
+            attrs = json.loads(comet_by_step)
+            last_attrs = list(attrs['entailments'].values())[-1]
+            attrs = []
+            for r, t in last_attrs.items():
+                attrs.append(f"[{r}] {t[0]}")
+            srcs += " EOS " + "0 0 0 " + " ".join(attrs[:3])
+
 
         srcs = srcs.split(" EOS")
         emotion = None
@@ -1131,7 +1141,7 @@ class InputFeatures_blender(object):
 
 
 def read_data_files(args, split='eval'):
-    with open(args.data_path+"/"+args.__getitem__(f"{split}_file_name"),"r") as f:
+    with open(args.data_path+"/"+args.__getitem__(f"{split}_file_name"),"r", encoding="utf-8") as f:
         chat_texts = f.read().split("\n")
     with open(args.data_path+"/" + args.__getitem__(f"situation_{split}_file_name"), "r", encoding="utf-8") as f:
         st_texts = f.read().split("\n")

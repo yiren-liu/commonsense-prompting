@@ -74,6 +74,11 @@ class Args():
         self.situation_eval_file_name = "devSituation.txt"
         self.situation_test_file_name = "testSituation.txt"
 
+                
+        self.cometStep_train_file_name = "trainCometOnly_DialogueHistory_ind_lastStep.jsonl"
+        self.cometStep_eval_file_name = "devCometOnly_DialogueHistory_ind_lastStep.jsonl"
+        self.cometStep_test_file_name = "testCometOnly_DialogueHistory_ind_lastStep.jsonl"
+
         # self.strategy = False
         self.strategy = True
         # self.context = False
@@ -84,8 +89,8 @@ class Args():
         self.target_model_path = './checkpoints/bart/baseline'
         self.model_cache_dir = f'./cached/models/predictor/{TAG}'
 
-        DEBUG = False
-        # DEBUG = True
+        # DEBUG = False
+        DEBUG = True
         if DEBUG:
             self.per_gpu_eval_batch_size = 4
             self.per_gpu_train_batch_size = 4
@@ -96,4 +101,6 @@ class Args():
             self.save_steps = 10
 
 
+    def __getitem__(self, name):
+        return getattr(self, name)
 

@@ -322,9 +322,10 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
                         input_ids, attention_mask=input_ids.ne(tokenizer.pad_token_id), 
                         labels=decoder_label_ids,
                     )
-                    logits = outputs[1]
+                    loss = outputs.loss
+                    ppl = torch.exp(loss)
 
-                    raise NotImplementedError
+                    # raise NotImplementedError
                 else:
                     outputs = model(
                         input_ids, attention_mask=input_ids.ne(tokenizer.pad_token_id), 
