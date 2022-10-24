@@ -60,7 +60,7 @@ class Args():
         self.adam_epsilon = 1e-8  # RAW 8
         self.max_grad_norm = 1.0
         # self.num_train_epochs = 8  # raw 10
-        self.num_train_epochs = 4  # raw 10
+        self.num_train_epochs = 2  # raw 10
         self.max_steps = -1
         self.warmup_steps = 120  # raw 120
         self.logging_steps = 100
@@ -83,13 +83,14 @@ class Args():
         self.turn = False
         self.role = False
 
-        self.DEBUG = True
-        # self.DEBUG = False
+        # self.DEBUG = True
+        self.DEBUG = False
 
 
         # TAG = 'genStrategyWithGold'
         # TAG = 'bartEncoderClassifier'
-        TAG = 'lm_with_FUDGE'
+        # TAG = 'lm_with_FUDGE'
+
         # TAG = 'genStrategyWithClassifier'
         self.generate_strategy = True
         self.strategy_predictor = "lm"
@@ -98,7 +99,8 @@ class Args():
         self.classifier_alpha = 1.0
         # self.d_model = 768
         self.d_model = 1024
-        self.use_fudge = True
+        # self.use_fudge = True
+        self.use_fudge = False
 
         self.situation_train_file_name = "trainSituation.txt"
         self.situation_eval_file_name = "devSituation.txt"
@@ -107,8 +109,17 @@ class Args():
         self.cometStep_train_file_name = "trainCometOnly_DialogueHistory_ind_lastStep.jsonl"
         self.cometStep_eval_file_name = "devCometOnly_DialogueHistory_ind_lastStep.jsonl"
         self.cometStep_test_file_name = "testCometOnly_DialogueHistory_ind_lastStep.jsonl"
-        # self.append_comet_to_input = True
-        self.append_comet_to_input = False
+        
+        
+        # TAG = 'lm_with_FUDGE_withAppendCOMET'
+        # TAG = 'lm_with_FUDGE_noCOMET'
+        # TAG = 'lm_with_FUDGE_noCOMET_oracle'
+        # TAG = 'baseline_with_noFUDGE_noCOMET'
+        # TAG = 'baseline_with_noFUDGE_withAppendCOMET'
+        # TAG = 'baseline_with_FUDGE_withAppendCOMET'
+        TAG = 'baseline_noFUDGE_withAppendCOMET_lm'
+        self.append_comet_to_input = True
+        # self.append_comet_to_input = False
 
         if self.append_comet_to_input:
             self.data_cache_dir = './cached/data/bart/add_context_add_strategy_add_cometStep'
