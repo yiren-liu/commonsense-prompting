@@ -62,7 +62,7 @@ class BERT_predictor(nn.Module):
         lengths: lengths of inputs; batch
         output: batch x classes
         """
-        outputs = self.bert(inputs)
+        outputs = self.bert(inputs[:, 512])
         if isinstance(outputs, torch.Tensor):
             logits = outputs
         else:
