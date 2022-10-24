@@ -23,8 +23,8 @@ class Args():
         self.num_train_epochs = 40  # raw 10
         self.max_steps = -1
         self.warmup_steps = 120  # raw 120
-        self.logging_steps = 1000
-        self.save_steps = 1000
+        self.logging_steps = 200
+        self.save_steps = 200
         self.save_total_limit = None
         self.eval_all_checkpoints = False
         self.no_cuda = False
@@ -74,10 +74,19 @@ class Args():
         self.situation_eval_file_name = "devSituation.txt"
         self.situation_test_file_name = "testSituation.txt"
 
-                
+        
         self.cometStep_train_file_name = "trainCometOnly_DialogueHistory_ind_lastStep.jsonl"
         self.cometStep_eval_file_name = "devCometOnly_DialogueHistory_ind_lastStep.jsonl"
         self.cometStep_test_file_name = "testCometOnly_DialogueHistory_ind_lastStep.jsonl"
+        TAG += 'BERT_with_appendCOMET'
+        self.append_comet_to_input = True
+        # self.append_comet_to_input = False
+
+        if self.append_comet_to_input:
+            self.data_cache_dir = './cached/data/bert_predictor/add_context_add_strategy_add_cometStep'
+        else:
+            self.data_cache_dir = './cached/data/bert_predictor/add_context_add_strategy'
+
 
         # self.strategy = False
         self.strategy = True
