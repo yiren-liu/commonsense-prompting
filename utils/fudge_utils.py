@@ -277,6 +277,7 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
                 inputs[(inputs==args.tokenizer.pad_token_id) | (inputs==-100)] = args.tokenizer.pad_token_id
                 lengths = (inputs!=args.tokenizer.pad_token_id).sum(axis=1)
                 inputs = inputs.to(args.device)
+                lengths = lengths.to(args.device)
 
                 scores = model(inputs, lengths)
 

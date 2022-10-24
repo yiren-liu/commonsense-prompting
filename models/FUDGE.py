@@ -6,6 +6,7 @@ from torch.nn.utils.rnn import pad_sequence, pad_packed_sequence, pack_padded_se
 class FUDGE_strategy(nn.Module):
     def __init__(self, args, vocab_size):
         super().__init__()
+        self.args = args
         self.strategy2id = args.strategy2id
         self.tokenizer = args.tokenizer
 
@@ -39,7 +40,7 @@ class FUDGE_strategy(nn.Module):
         syllables_to_go: batch
         """
         inputs = self.embedding(inputs)
-        inputs = pack_padded_sequence(inputs.permute(1, 0, 2), lengths.cpu(), enforce_sorted=False)
+        inputs = pack_padded_sequence(inputs.permute(1, 0, 2), lengths, enforce_sorted=False)
         rnn_output, _ = self.rnn(inputs)
         rnn_output, _ = pad_packed_sequence(rnn_output)
         rnn_output = rnn_output.permute(1, 0, 2) # batch x seq x hiddenSize
