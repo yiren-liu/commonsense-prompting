@@ -841,12 +841,14 @@ def generate(args, model):
             ) #top_p 0.9, topk 30
 
             if args.use_fudge:
-                strategy = chat_history_ids[:, -1]
-                strategy_vocab_ids = tokenizer.encode(list(STRATEGY2ID.keys()), add_special_tokens=False)
-                if strategy not in strategy_vocab_ids:
-                    strategy = torch.tensor([strategy_vocab_ids[0]], dtype=torch.long).to(args.device)
+                # strategy = chat_history_ids[:, -1]
+                # strategy_vocab_ids = tokenizer.encode(list(STRATEGY2ID.keys()), add_special_tokens=False)
+                # if strategy not in strategy_vocab_ids:
+                #     strategy = torch.tensor([strategy_vocab_ids[0]], dtype=torch.long).to(args.device)
 
+                strategy = model.generate_strategy(input_ids, args, next_strategy_id, **paras)
                 
+
                 # load fudge model
                 if model.fudge_model is None:
                     conditioning_model = torch.load(args.fudge_model_path + "/pytorch_model.bin")
