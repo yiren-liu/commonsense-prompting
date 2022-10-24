@@ -83,8 +83,8 @@ class Args():
         self.turn = False
         self.role = False
 
-        # self.DEBUG = True
-        self.DEBUG = False
+        self.DEBUG = True
+        # self.DEBUG = False
 
 
         # TAG = 'genStrategyWithGold'

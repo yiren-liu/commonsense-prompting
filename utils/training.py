@@ -281,8 +281,8 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
             #         comet_ids_st, attention_mask=comet_ids_st.ne(tokenizer.pad_token_id))[0][:, 0, :]
             # comet_embs_st = comet_embs_st.view(batch_size, n_attr, -1)
 
-            comet_by_step_ids = comet_by_step_ids.to(args.device)
-            comet_by_step_mask = comet_by_step_mask.to(args.device)
+            if comet_by_step_ids: comet_by_step_ids = comet_by_step_ids.to(args.device)
+            if comet_by_step_mask: comet_by_step_mask = comet_by_step_mask.to(args.device)
             
 
             input_ids = input_ids.to(args.device)
@@ -355,9 +355,10 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
 
             tr_loss += loss.item()
             tr_ppl += ppl.item()
-            tr_lm_loss += lm_loss.item()
+            if args.strategy_predictor == "classifier":
+                tr_lm_loss += lm_loss.item()
             # tr_emo_loss += emo_loss.item()
-            tr_strategy_loss += strategy_loss.item()
+                tr_strategy_loss += strategy_loss.item()
             # tr_intensity_loss += intensity_loss.item()
 
             if (step + 1) % args.gradient_accumulation_steps == 0:
@@ -534,8 +535,8 @@ def evaluate(args, model: PreTrainedModel, tokenizer: PreTrainedTokenizer, eval_
         comet_ids_st = comet_ids_st.to(args.device)
         comet_mask_st = comet_mask_st.to(args.device)
 
-        comet_by_step_ids = comet_by_step_ids.to(args.device)
-        comet_by_step_mask = comet_by_step_mask.to(args.device)
+        if comet_by_step_ids: comet_by_step_ids = comet_by_step_ids.to(args.device)
+        if comet_by_step_mask: comet_by_step_mask = comet_by_step_mask.to(args.device)
 
         batch_size, n_attr, len_attr = comet_ids.shape
         comet_ids = comet_ids.view(-1, len_attr)
@@ -596,16 +597,16 @@ def evaluate(args, model: PreTrainedModel, tokenizer: PreTrainedTokenizer, eval_
                         input_ids, attention_mask=input_ids.ne(tokenizer.pad_token_id), 
                         labels=decoder_label_ids,
                     )
-                    logits = outputs[1]
+                    lm_loss = outputs.loss
+                    ppl = torch.exp(lm_loss)
 
-                    raise NotImplementedError
                 else:
                     outputs = model(
                         input_ids, attention_mask=input_ids.ne(tokenizer.pad_token_id), 
                         labels=decoder_label_ids,
                     )
-                    loss = outputs.loss
-                    ppl = torch.exp(loss)
+                    lm_loss = outputs.loss
+                    ppl = torch.exp(lm_loss)
 
                 # emo_logits = outputs.emo_logits
                 # strategy_logits = outputs.strategy_logits
