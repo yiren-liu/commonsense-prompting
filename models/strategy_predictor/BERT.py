@@ -22,6 +22,9 @@ class BERT_predictor(nn.Module):
 
         if args.pretrained_predictor_dir:
             self.bert = torch.load(args.pretrained_predictor_dir + "/pytorch_model.bin").to(args.device)
+            args.tokenizer = RobertaTokenizer.from_pretrained(
+                args.pretrained_predictor_dir, cache_dir=args.model_cache_dir
+            )
             pass
         else:
             self.bert = RobertaForSequenceClassification.from_pretrained(
