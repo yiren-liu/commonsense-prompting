@@ -34,6 +34,20 @@ class Args():
             "[None]": 8,
         }
 
+        self.comet_template = {
+            "[oEffect]": "As a result, Person Y",
+            "[oReact]": "As a result, PersonY feels",
+            "[oWant]": "As a result, PersonY wants",
+            "[xAttr]": "PersonX is seen as",
+            "[xEffect]": 'As a result, PersonX',
+            "[xIntent]": 'because PersonX wanted',
+            "[xNeed]": 'but before, PersonX needed',
+            "[xReact]": 'As a result, PersonX feels',
+            "[xReason]": 'because',
+            "[xWant]": 'As a result, PersonX wants'
+        }
+
+
         self.model_cache_dir = './cached/models/bart-comet2020/'
         # self.model_cache_dir = './cached/models/bart-comet2020/add_contextCOMET'
         # self.data_cache_dir = './cached/data/bart-comet2020/no_context_no_strategy'
@@ -88,7 +102,7 @@ class Args():
         # self.DEBUG = False
 
 
-        TAG = 'genStrategyWithGold'
+        # TAG = 'genStrategyWithGold'
         self.generate_strategy = True
         self.strategy_predictor = "lm"
         # self.strategy_predictor = "gts"
@@ -109,7 +123,8 @@ class Args():
         self.cometStep_test_file_name = "testCometOnly_DialogueHistory_ind_lastStep.jsonl"
         
 
-        TAG = 'genStrategyWithGold'
+        # TAG = 'genStrategyWithGold'
+        TAG = 'baseline_noFUDGE_withAppendCOMET_lm'
 
         self.overwrite_cache = True
         self.append_comet_to_input = True
@@ -126,7 +141,7 @@ class Args():
 
         self.do_train = True
         # self.do_train = False
-        self.load_dir = os.path.join('checkpoints', 'bart', TAG)
+        self.load_dir = os.path.join('checkpoints', 'bart-comet2020', TAG)
         # self.load_dir = os.path.join('checkpoints', 'bart', 'baseline')
         self.fudge_model_path = os.path.join('checkpoints', 'FUDGE', 'baseline__d_model__300')
 
