@@ -67,8 +67,8 @@ class Args():
         self.save_steps = 100
         self.save_total_limit = None
         self.eval_all_checkpoints = False
-        # self.no_cuda = False
-        self.no_cuda = True
+        self.no_cuda = False
+        # self.no_cuda = True
         self.overwrite_output_dir = True
         self.overwrite_cache = False
         self.should_continue = False
@@ -83,17 +83,20 @@ class Args():
         self.turn = False
         self.role = False
 
-        self.DEBUG = True
-        # self.DEBUG = False
+        # self.DEBUG = True
+        self.DEBUG = False
 
 
-        TAG = 'genStrategyWithGold'
+        # TAG = 'genStrategyWithGold'
+        # TAG = 'bartEncoderClassifier'
+        TAG = 'lm_with_FUDGE'
         self.generate_strategy = True
-        # self.strategy_predictor = "lm"
+        self.strategy_predictor = "lm"
         # self.strategy_predictor = "gts"
-        self.strategy_predictor = "classifier"
+        # self.strategy_predictor = "classifier"
         self.classifier_alpha = 1.0
-        self.d_model = 768
+        # self.d_model = 768
+        self.d_model = 1024
         self.use_fudge = True
 
         self.situation_train_file_name = "trainSituation.txt"
@@ -101,7 +104,8 @@ class Args():
         self.situation_test_file_name = "testSituation.txt"
         self.data_cache_dir = './cached/data/bart/add_context_add_strategy'
         self.do_train = True
-        self.load_dir = os.path.join('checkpoints', 'bart', 'baseline')
+        # self.do_train = False
+        self.load_dir = os.path.join('checkpoints', 'bart', TAG)
         self.fudge_model_path = os.path.join('checkpoints', 'FUDGE', 'baseline__d_model__300')
 
         if self.DEBUG:      
@@ -138,3 +142,7 @@ class Args():
 
         self.output_dir = os.path.join('checkpoints', 'bart', TAG)
         self.generation_dir = os.path.join('outputs', 'bart_generated', TAG)
+
+
+    def __getitem__(self, name):
+        return getattr(self, name)

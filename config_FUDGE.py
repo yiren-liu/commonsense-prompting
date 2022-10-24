@@ -48,8 +48,8 @@ class Args():
             "[None]": 8,
         }
 
-        # self.d_model = 300
-        self.d_model = 600
+        self.d_model = 300
+        # self.d_model = 600
 
         TAG = 'baseline'
         TAG += '__d_model__' + str(self.d_model)
