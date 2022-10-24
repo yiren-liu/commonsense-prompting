@@ -92,8 +92,8 @@ class BartATOMIC2020(BartForConditionalGeneration):
                 strategy_logits = next_token_logits[:, strategy_ids]
                 # get the max strategy logits
                 max_strategy_logits, max_strategy_ids = torch.max(strategy_logits, dim=1)
-                best_strategy_ids = strategy_ids[max_strategy_ids]
-            return torch.LongTensor([best_strategy_ids]).to(args.device)
+                best_strategy_ids = torch.LongTensor(strategy_ids)[max_strategy_ids]
+            return best_strategy_ids.to(args.device)
         elif args.strategy_predictor == "classifier":
             # use a classifier to predict the strategy
             if not self.strategy_classifier:
@@ -109,9 +109,8 @@ class BartATOMIC2020(BartForConditionalGeneration):
                 )
                 classifier_logits = self.strategy_classifier(output_lm.encoder_last_hidden_state)
                 max_strategy_logits, max_strategy_ids = torch.max(classifier_logits, dim=1)
-                best_strategy_ids = strategy_ids[max_strategy_ids]
-            # raise NotImplementedError
-            return torch.LongTensor([best_strategy_ids]).to(args.device)
+                best_strategy_ids = torch.LongTensor(strategy_ids)[max_strategy_ids]
+            return best_strategy_ids
         else:
             raise NotImplementedError
 
