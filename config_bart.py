@@ -129,7 +129,8 @@ class Args():
         # TAG = 'baseline_with_noFUDGE_noCOMET'
         # TAG = 'baseline_with_noFUDGE_withAppendCOMET'
         # TAG = 'baseline_with_FUDGE_withAppendCOMET'
-        TAG = 'baseline_noFUDGE_withAppendCOMET_lm'
+        # TAG = 'baseline_noFUDGE_withAppendCOMET_lm'
+        TAG = 'baseline_noFUDGE_withAppendCOMETverbalized_lm'
 
         self.overwrite_cache = True
         self.append_comet_to_input = True
