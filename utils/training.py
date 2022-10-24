@@ -838,6 +838,31 @@ def generate(args, model):
                 top_p=0.3, top_k = 30, do_sample=True, repetition_penalty=1.03
             ) #top_p 0.9, topk 30
 
+            if args.use_fudge:
+                strategy = chat_history_ids[:, -1]
+                strategy_vocab_ids = tokenizer.encode(list(STRATEGY2ID.keys()), add_special_tokens=False)
+                if strategy not in strategy_vocab_ids:
+                    strategy = torch.tensor([strategy_vocab_ids[0]], dtype=torch.long).to(args.device)
+
+                
+                # load fudge model
+                conditioning_model = torch.load(args.fudge_model_path + "/pytorch_model.bin")
+                conditioning_model.to(args.device)
+                conditioning_model.eval()
+
+                # get strategy idx
+                target_attr_idx = STRATEGY2ID[tokenizer.decode(strategy, skip_special_tokens=True)]
+
+                chat_history_ids = model.generate_fudge(
+                    input_ids, model, tokenizer, 
+                    conditioning_model, target_attr_idx,
+                    decoder_start_token_id = strategy.item(),
+                    precondition_topk=200, length_cutoff=512, 
+                    condition_lambda=1.0, 
+                    # condition_lambda=0.0, 
+                    device=args.device
+                )
+
         # print(tokenizer.decode(chat_history_ids[:, :][0][2:], skip_special_tokens=True))
         # raise Exception("stop")
 
