@@ -90,6 +90,7 @@ class Args():
         # TAG = 'genStrategyWithGold'
         # TAG = 'bartEncoderClassifier'
         TAG = 'lm_with_FUDGE'
+        # TAG = 'genStrategyWithClassifier'
         self.generate_strategy = True
         self.strategy_predictor = "lm"
         # self.strategy_predictor = "gts"
@@ -102,24 +103,33 @@ class Args():
         self.situation_train_file_name = "trainSituation.txt"
         self.situation_eval_file_name = "devSituation.txt"
         self.situation_test_file_name = "testSituation.txt"
-        self.data_cache_dir = './cached/data/bart/add_context_add_strategy'
+        
+        self.cometStep_train_file_name = "trainCometOnly_DialogueHistory_ind_lastStep.jsonl"
+        self.cometStep_eval_file_name = "devCometOnly_DialogueHistory_ind_lastStep.jsonl"
+        self.cometStep_test_file_name = "testCometOnly_DialogueHistory_ind_lastStep.jsonl"
+        self.append_comet_to_input = True
+
+        # self.data_cache_dir = './cached/data/bart/add_context_add_strategy'
+        self.data_cache_dir = './cached/data/bart/add_context_add_strategy_add_cometStep'
         self.do_train = True
         # self.do_train = False
         self.load_dir = os.path.join('checkpoints', 'bart', TAG)
+        # self.load_dir = os.path.join('checkpoints', 'bart', 'baseline')
         self.fudge_model_path = os.path.join('checkpoints', 'FUDGE', 'baseline__d_model__300')
 
         if self.DEBUG:      
             TAG = 'debug'
             self.per_gpu_train_batch_size = 1
             self.per_gpu_eval_batch_size = 1
-            self.data_path = "./data/dataset/sample_100"
-            self.data_cache_dir = './cached/data/bart/debug_100'
+            self.data_path = "./data/dataset/sample_5"
+            self.data_cache_dir = './cached/data/bart/debug_5'
             self.model_cache_dir = './cached/models/bart/debug'
             self.model_name_or_path = "facebook/bart-base"
             self.config_name = "facebook/bart-base"
             self.tokenizer_name = "facebook/bart-base"
             # self.load_dir = os.path.join('checkpoints', 'bart', 'debug')
-            self.load_dir = os.path.join('checkpoints', 'bart', 'baseline')
+            # self.load_dir = os.path.join('checkpoints', 'bart', 'baseline')
+            self.load_dir = os.path.join('checkpoints', 'bart', 'bartEncoderClassifier')
 
 
         # TAG = 'baseline'
