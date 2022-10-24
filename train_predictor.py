@@ -5,7 +5,6 @@ import numpy as np
 
 import torch
 
-os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
 try:
     from torch.utils.tensorboard import SummaryWriter
@@ -14,11 +13,16 @@ except ImportError:
 
 from tqdm import tqdm, trange
 
+from transformers import (
+    AutoTokenizer,
+)
 
-from utils.dataloader import ESDDatasetBartCOMET2020, read_data_files
-from models.BART import BartATOMIC2020, getBartTokenizerATOMIC2020
-from config_bart_comet2020 import Args
-from utils.training import train, evaluate, generate, set_seed
+from utils.dataloader import ESDDatasetBartCOMET2020
+from models.strategy_predictor.LSTM import LSTM_predictor
+from models.strategy_predictor.BERT import BERT_predictor
+from config_predictor import Args
+from utils.predictor_utils import train, evaluate, generate, set_seed
+from utils.dataloader import read_data_files
 
 # Configs
 # logger
@@ -43,13 +47,17 @@ if __name__ == "__main__":
     set_seed(args)
 
     # load tokenizer
-    tokenizer = getBartTokenizerATOMIC2020(args)
+    tokenizer = AutoTokenizer.from_pretrained(
+        args.target_model_path, cache_dir=args.model_cache_dir
+    )
     args.tokenizer = tokenizer
+    # model = LSTM_predictor(args, len(tokenizer))
 
-    # model = BlenderbotSmallForConditionalGeneration.from_pretrained(args.model_name_or_path, cache_dir=args.model_cache_dir)
-    model = BartATOMIC2020.from_pretrained(
-        args.model_name_or_path, cache_dir=args.model_cache_dir)
-    model.resize_token_embeddings(len(tokenizer))
+
+    model = BERT_predictor(args)
+    tokenizer = args.tokenizer
+
+    
     model.to(args.device)
 
     logger.info("Training/evaluation parameters %s", args)
@@ -65,6 +73,7 @@ if __name__ == "__main__":
         df_val, st_val, comet_val, st_comet_val, comet_by_step_eval = read_data_files(args, split="eval")
         df_test, st_test, comet_test, st_comet_test, comet_by_step_test = read_data_files(args, split="test")
 
+
         args.train_dataset = ESDDatasetBartCOMET2020(tokenizer, args, df_trn, comet_trn,
                                         st_comet_trn, st_trn, comet_by_step_trn,
                                         strategy=args.strategy, evaluate=False, test=False, add_situ=args.context)
@@ -76,35 +85,15 @@ if __name__ == "__main__":
                                        evaluate=True, strategy=args.strategy, test=True, add_situ=args.context)
 
         # # Training
-        global_step, tr_loss, tr_lm_loss, tr_strategy_loss, tr_ppl = train(
+        global_step, tr_loss = train(
             args, args.train_dataset, model, tokenizer)
-        # logger.info(" global_step = %s, average loss = %s",
-        #             global_step, tr_loss)
-        logger.info(
-            " global_step = %s, average lm loss = %s, average strategy loss = %s, average ppl = %s",
-            global_step, tr_lm_loss, tr_strategy_loss, tr_ppl
-        )
-
+        logger.info(" global_step = %s, average loss = %s",
+                    global_step, tr_loss)
 
         # evaluation
-        model = BartATOMIC2020.from_pretrained(
-            args.output_dir, from_tf=False)
+        # load the model from the checkpoint
+        model = torch.load(args.output_dir + "/pytorch_model.bin")
         model.to(args.device)
         test_results = evaluate(args, model, tokenizer,
                                 args.test_dataset, "of test set")
         
-        # raise NotImplementedError # figure out the perplexity issue
-
-
-    df_test, st_test, comet_test, st_comet_test, comet_by_step = read_data_files(args, split="test")
-    args.test_dataset = ESDDatasetBartCOMET2020(tokenizer, args, df_test, comet_test,
-                                    st_comet_test, st_test, comet_by_step=comet_by_step, 
-                                    evaluate=True, strategy=args.strategy, test=True, add_situ=args.context)
-
-    model = BartATOMIC2020.from_pretrained(args.load_dir,
-        from_tf=False)
-    model.resize_token_embeddings(len(tokenizer))
-
-    generate(args, model)
-
-    # raise NotImplementedError

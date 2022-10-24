@@ -7,6 +7,7 @@ from typing import List
 from collections import Counter
 from nltk.translate.bleu_score import corpus_bleu, SmoothingFunction
 
+from datasets import load_dataset, load_metric
 
 class Metric(object):
     def __init__(self, toker, hyp_path, ref_path):
@@ -89,7 +90,41 @@ class Metric(object):
                 score = 0.0
             scores.append(score)
         return np.mean(scores), scores
-        
+    
+    def calc_meteor(self):
+        meteor = load_metric("meteor")
+        return meteor.compute(predictions=self.hyps, references=self.refs)
+
+    def calc_comet(self):
+        comet = load_metric("comet")
+        return comet.compute(predictions=self.hyps, references=self.refs)
+    
+    def calc_bertscore(self):
+        bertscore = load_metric("bertscore")
+        return bertscore.compute(predictions=self.hyps, references=self.refs, lang="en")
+
+    def calc_strategy_acc(self):
+        strategy_acc = load_metric("accuracy")
+        strategy_f1 = load_metric("f1")
+
+        strategy_hyps = [tokens[0] for tokens in self.hyps]
+        strategy_refs = [tokens[0] for ref in self.refs for tokens in ref]
+        # build a index
+        strategies = set(strategy_hyps + strategy_refs)
+        strategy2idx = {s: i for i, s in enumerate(strategies)}
+        strategy_hyps = [strategy2idx[s] for s in strategy_hyps]
+        strategy_refs = [strategy2idx[s] for s in strategy_refs]
+
+        res = {}
+        res["strategy_acc"] = strategy_acc.compute(
+            predictions=strategy_hyps, references=strategy_refs
+        )
+        res["strategy_f1"] = strategy_f1.compute(
+            predictions=strategy_hyps, references=strategy_refs, average="micro"
+        )
+        return res
+
+
 
     def close(self):
         result = {
@@ -109,7 +144,34 @@ class Metric(object):
         result_list.update({
             'rouge-l': scores
         })
-        
+
+        meteor = self.calc_meteor()
+        result['meteor'] = 100 * meteor['meteor']
+        result_list.update({
+            'meteor': meteor['meteor']
+        })
+
+
+        # comet = self.calc_comet()
+        # result['comet'] = 100 * comet['comet']
+        # result_list.update({
+        #     'comet': comet['comet']
+        # })
+
+        bertscore = self.calc_bertscore()
+        result['bertscore'] = 100 * np.mean(bertscore['f1'])
+        result_list.update({
+            'bertscore': np.mean(bertscore['f1'])
+        })
+
+        strategy_acc = self.calc_strategy_acc()
+        result['strategy_acc'] = 100 * strategy_acc['strategy_acc']['accuracy']
+        result['strategy_f1'] = 100 * strategy_acc['strategy_f1']['f1']
+        result_list.update({
+            'strategy_acc': strategy_acc['strategy_acc'],
+            'strategy_f1': strategy_acc['strategy_f1']
+        })
+
         return result, result_list
 
 

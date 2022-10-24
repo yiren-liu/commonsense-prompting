@@ -1,0 +1,41 @@
+BART:
+<s> Oh no! I'm sorry to hear that. What's going on?</s><s>Just financial problems</s><s> There's a lot of that going on these days, it can be rough. I know how you feel. Do you have any plans you want to put into play to solve the problem?</s><s>I'm attempting to sue money and pay off my debts and hopefully everything will get sorted out</s><s>save*</s><s> It seems like you've got some good plans in the making. So you're trying to save and reduce your debts as much as possible right?</s><s>Yes</s><s> That's great to hear. Do you have anyone close to you that can help you out in a bind?</s><s>My mom has helped loan me money to pay bills that are about to be cut off. Just a small bit though. It has helped a lot though [GEN]</s><pad><pad><pad><pad><pad>
+<s> That's excellent! It's always great to have someone you can depend on. I feel like that gave you some relief.</s><pad><pad><pad><pad><pad>
+
+
+BART-COMET:
+<s> Oh no! I'm sorry to hear that. What's going on?</s><s>Just financial problems</s><s> There's a lot of that going on these days, it can be rough. I know how you feel. Do you have any plans you want to put into play to solve the problem?</s><s>I'm attempting to sue money and pay off my debts and hopefully everything will get sorted out</s><s>save*</s><s> It seems like you've got some good plans in the making. So you're trying to save and reduce your debts as much as possible right?</s><s>Yes</s><s> That's great to hear. Do you have anyone close to you that can help you out in a bind?</s><s>My mom has helped loan me money to pay bills that are about to be cut off. Just a small bit though. It has helped a lot though [GEN]</s><pad><pad><pad><pad><pad><pad>
+<s> That's excellent! It's always great to have someone you can depend on. I feel like that gave you some relief.</s><pad><pad><pad><pad><pad>
+
+
+with_situ:
+<s>Context:They are always demotivate my economic status. It hurts me a lot</s><s>I need some tips to overcome from that problem</s><s> Hey. How can I help?</s><s>Give me some tips to get succeed in my life</s><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad>80
+<pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><s> Okay. Well lets start with exactly what the problem is. What
+kind of tips do you need?</s><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad>
+
+no_situ:
+
+
+
+blenderbot:
+[CLS] i need some tips to overcome from that problem __end__ hey. how can i help? __end__ give me some tips to get succeed in my life __end__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__ __null__
+24
+okay. well lets start with exactly what the problem is. what kind of tips do you need? __end__ __start__ __start__ __start__
+
+
+COMET-BART plain:
+    Eval perplexity:  11468.40690239118
+    lr: 0.000017, step: 1000, loss: 2.633574
+    Eval perplexity:  20893.139980762608
+    lr: 0.000015, step: 2000, loss: 2.167759
+    Eval perplexity:  110130.31652505911
+    lr: 0.000012, step: 3000, loss: 1.787407
+    Eval perplexity:  300898.27128823835
+    lr: 0.000009, step: 4000, loss: 1.491481
+    Eval perplexity:  1149326.933106448
+    lr: 0.000006, step: 5000, loss: 1.261684
+    Eval perplexity:  1602050.5018750026
+    lr: 0.000003, step: 6000, loss: 1.072305
+    Eval perplexity:  1944245.1525715312
+    lr: 0.000000, step: 7000, loss: 0.972159
+BART plain:

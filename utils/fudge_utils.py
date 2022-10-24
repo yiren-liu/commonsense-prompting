@@ -1,4 +1,3 @@
-from lib2to3.pgen2 import token
 from typing import Dict, List, Tuple
 import os
 import random
@@ -10,7 +9,10 @@ import json
 
 import numpy as np
 
+from sklearn.metrics import f1_score
+
 import torch
+from torch import nn
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader, Dataset, RandomSampler, SequentialSampler
 from torch.utils.data.distributed import DistributedSampler
@@ -21,9 +23,7 @@ from transformers import (
     get_linear_schedule_with_warmup,
     PreTrainedModel,
     PreTrainedTokenizer,
-    BlenderbotSmallTokenizer,
-    BlenderbotSmallForConditionalGeneration,
-    BlenderbotSmallConfig
+    generation_utils,
 )
 from torch.optim import AdamW
 
@@ -36,16 +36,10 @@ except ImportError:
 
 from tqdm import tqdm, trange
 
-
-from utils.dataloader import ESDDatasetBlenderbot
-from models.blenderbot import getBlenderbotTokenizerATOMIC2020, BlenderbotATOMIC2020
 from utils.evaluation import summary, Metric
-from config_blenderbot import Args
 
-# Configs
-# logger
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger()
+
 
 def set_seed(args):
     random.seed(args.seed)
@@ -69,7 +63,7 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
     train_sampler = RandomSampler(
         train_dataset) if args.local_rank == -1 else DistributedSampler(train_dataset)
     train_dataloader = DataLoader(
-        train_dataset, sampler=train_sampler, batch_size=args.train_batch_size, collate_fn=ESDDatasetBlenderbot.collate, drop_last=False
+        train_dataset, sampler=train_sampler, batch_size=args.train_batch_size, collate_fn=args.train_dataset.collate, drop_last=False
     )
 
     if args.max_steps > 0:
@@ -82,7 +76,7 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
 
     # Take care of distributed/parallel training
     model = model.module if hasattr(model, "module") else model
-    model.resize_token_embeddings(len(tokenizer))
+    # model.resize_token_embeddings(len(tokenizer))
     # Prepare optimizer and schedule (linear warmup and decay)
     no_decay = ["bias", "LayerNorm.weight"]
     optimizer_grouped_parameters = [
@@ -182,7 +176,8 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
 
     tr_loss, logging_loss, tr_lm_loss, logging_lm_loss, tr_emo_loss, \
         logging_emo_loss, tr_strategy_loss, logging_strategy_loss, tr_intensity_loss, logging_intensity_loss = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
-    best_ppl = 1e8
+    tr_ppl, logging_ppl = 0.0, 0.0
+    best_loss = 1e8
 
     model.zero_grad()
     #train_iterator = range(epochs_trained, int(args.num_train_epochs))
@@ -191,28 +186,11 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
     set_seed(args)  # Added here for reproducibility
     import numpy as np
     np.set_printoptions(threshold=np.inf)
+
+    criterion = nn.CrossEntropyLoss().to(args.device)
+
+    print_cnt = 0
     for epoch in train_iterator:
-        # if epoch < 3:
-        #     for paras in model.model.encoder.parameters():
-        #         paras.requires_grad = True
-        #     for paras in model.model.decoder.parameters():
-        # #         paras.requires_grad = False
-        # if epoch < 6:
-        #     if epoch % 2 == 0:
-        #         for paras in model.model.encoder.parameters():
-        #             paras.requires_grad = True
-        #         for paras in model.model.decoder.parameters():
-        #             paras.requires_grad = False
-        #     else:
-        #         for paras in model.model.encoder.parameters():
-        #             paras.requires_grad = False
-        #         for paras in model.model.decoder.parameters():
-        #             paras.requires_grad = True
-        # else:
-        #     for paras in model.model.encoder.parameters():
-        #         paras.requires_grad = True
-        #     for paras in model.model.decoder.parameters():
-        #         paras.requires_grad = True
 
         epoch_iterator = tqdm(train_dataloader, desc="Training Epoch: %s"%epoch)
         for step, batch in enumerate(epoch_iterator):
@@ -223,19 +201,25 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
                 continue
 
             input_ids, position_ids, turn_ids, role_ids, labels, cls_positions, cls_labels, strategy_ids, decoder_input_ids, decoder_position_ids, decoder_turn_ids, \
-                decoder_role_ids, decoder_labels, decoder_cls_positions, decoder_cls_labels, decoder_strategy_ids, comet_ids, comet_mask, emotion, comet_ids_st, comet_mask_st = batch
+                decoder_role_ids, decoder_labels, decoder_cls_positions, decoder_cls_labels, decoder_strategy_ids, comet_ids, comet_mask, emotion, comet_ids_st, comet_mask_st, comet_by_step_ids, comet_by_step_mask = batch
             
-            # print(role_ids)
-            # print(input_ids)
-            for item in input_ids[:1]:
-                print(len(item))
-                print(tokenizer.decode(item))
-            for item in decoder_labels[:1]:
-                print(len(item))
-                item[item==-100] = 1
-                print(tokenizer.decode(item))
-            raise Exception("debug")
 
+            if print_cnt==0:
+                # print(role_ids)
+                # print(input_ids)
+                for item in input_ids[:1]:
+                    print(len(item))
+                    print(tokenizer.decode(item))
+                for item in decoder_labels[:1]:
+                    print(len(item))
+                    item[item==-100] = tokenizer.pad_token_id
+                    print(tokenizer.decode(item))
+                # raise Exception("debug")
+                print_cnt+=1
+
+
+
+            # print(1 / 0)
             decoder_strategy_ids = decoder_strategy_ids[:, 0]
             decoder_strategy_ids = decoder_strategy_ids.to(args.device)
 
@@ -257,17 +241,17 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
 
             batch_size, n_attr, len_attr = comet_ids.shape
             comet_ids = comet_ids.view(-1, len_attr)
-            with torch.no_grad():
-                comet_embs = model.model.encoder(
-                    comet_ids, attention_mask=comet_ids.ne(tokenizer.pad_token_id))[0][:, 0, :]
-            comet_embs = comet_embs.view(batch_size, n_attr, -1)
+            # with torch.no_grad():
+            #     comet_embs = model.model.encoder(
+            #         comet_ids, attention_mask=comet_ids.ne(tokenizer.pad_token_id))[0][:, 0, :]
+            # comet_embs = comet_embs.view(batch_size, n_attr, -1)
 
             batch_size, n_attr, len_attr = comet_ids_st.shape
             comet_ids_st = comet_ids_st.view(-1, len_attr)
-            with torch.no_grad():
-                comet_embs_st = model.model.encoder(
-                    comet_ids_st, attention_mask=comet_ids_st.ne(tokenizer.pad_token_id))[0][:, 0, :]
-            comet_embs_st = comet_embs_st.view(batch_size, n_attr, -1)
+            # with torch.no_grad():
+            #     comet_embs_st = model.model.encoder(
+            #         comet_ids_st, attention_mask=comet_ids_st.ne(tokenizer.pad_token_id))[0][:, 0, :]
+            # comet_embs_st = comet_embs_st.view(batch_size, n_attr, -1)
 
             input_ids = input_ids.to(args.device)
             turn_ids = turn_ids.to(args.device)
@@ -289,41 +273,23 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
                 # model outputs are always tuple in transformers (see doc)
                 ppl = loss = outputs[0]
             else:
-                # print("input_ids:", input_ids)
-                # print("role_ids:", role_ids)
-                # print("turn_ids:", turn_ids)
+                inputs = decoder_label_ids.cpu()[:, 1:]
+                inputs[(inputs==args.tokenizer.pad_token_id) | (inputs==-100)] = args.tokenizer.pad_token_id
+                lengths = (inputs!=args.tokenizer.pad_token_id).sum(axis=1)
+                inputs = inputs.to(args.device)
+                lengths = lengths.to(args.device)
 
-                # print("decoder_input_ids:", decoder_input_ids)
-                # print("decoder_role_ids:", decoder_role_ids)
-                # print("decoder_turn_ids:", decoder_turn_ids)
+                scores = model(inputs, lengths)
 
-                # print(tokenizer.decode(input_ids[0]))
-                # # print(tokenizer.decode(role_ids[0]))
-                # print(tokenizer.decode(decoder_input_ids[0]))
-                # print(tokenizer.decode(decoder_label_ids[0]))
-                # raise Exception("stop")
-
-                # raise NotImplementedError # is the decoder_input_ids correct? not shifted by 1?
-
-                outputs = model(input_ids, attention_mask=input_ids.ne(tokenizer.pad_token_id), labels=decoder_label_ids,
-                    # decoder_input_ids=decoder_input_ids,
-                    # decoder_turn_ids=decoder_turn_ids, decoder_role_ids=decoder_role_ids, turn_ids=turn_ids,
-                    # role_ids=role_ids, decoder_strategy_ids=decoder_strategy_ids, 
-                    # comet_embs=comet_embs, comet_mask=comet_mask, comet_embs_st=comet_embs_st, 
-                    # comet_mask_st=comet_mask_st, emotion=emotion
+                classification_targets = model.convert_tokenIds_to_strategyIds(decoder_strategy_ids)
+                classification_targets = torch.tensor(classification_targets).to(args.device)
+                expanded_labels = classification_targets.unsqueeze(1).expand(-1, scores.shape[1]) # batch x seq
+                length_mask = pad_mask(lengths).permute(1, 0) # batch x seq
+                loss = criterion(
+                    scores.flatten(0, 1)[length_mask.flatten()==1], 
+                    expanded_labels.flatten()[length_mask.flatten()==1]
                 )
-                # print(outputs.lm_logits, outputs.emo_logits)
-                # print(outputs.loss, outputs.emo_loss, outputs.lm_loss)
-                # print(1 / 0)
-                loss = outputs.loss
-                # lm_loss = ppl = outputs.lm_loss
-                # emo_loss = outputs.emo_loss
-                # intensity_loss = outputs.intensity_loss
-                # strategy_loss = outputs.strategy_loss
 
-            # if not args.no_cuda and args.n_gpu >= 1:
-            #     loss = loss.mean()  # mean() to average on multi-gpu parallel training
-            #     ppl = ppl.mean()
 
             if args.gradient_accumulation_steps > 1:
                 loss = loss / args.gradient_accumulation_steps
@@ -331,19 +297,11 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
                 with amp.scale_loss(loss, optimizer) as scaled_loss:
                     scaled_loss.backward()
             else:
-                backward_loss = outputs.loss
-                # backward_loss = outputs.lm_loss
-                # if epoch == 0 or epoch == 1:
-                #     backward_loss = outputs.strategy_loss
-                # else:
-                #     backward_loss = outputs.loss
+                backward_loss = loss
                 backward_loss.backward()
 
             tr_loss += loss.item()
-            # tr_lm_loss += lm_loss.item()
-            # tr_emo_loss += emo_loss.item()
-            # tr_strategy_loss += strategy_loss.item()
-            # tr_intensity_loss += intensity_loss.item()
+
 
             if (step + 1) % args.gradient_accumulation_steps == 0:
                 if args.fp16:
@@ -372,23 +330,17 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
                         "loss", (tr_loss - logging_loss) / args.logging_steps, global_step)
                     logger.info("lr: %f, step: %d, loss: %f", scheduler.get_last_lr()[0],
                                 global_step, (tr_loss - logging_loss) /
-                                args.logging_steps,)
+                                args.logging_steps)
 
-                    # logger.info("lr: %f, step: %d, loss: %f, lm_loss: %f, emo_loss: %f, strategy_loss: %f, intensity_loss: %f", scheduler.get_last_lr()[0],
-                    #             global_step, (tr_loss - logging_loss) /
-                    #             args.logging_steps, (tr_lm_loss -
-                    #                                  logging_lm_loss) / args.logging_steps,
-                    #             (tr_emo_loss - logging_emo_loss) / args.logging_steps, (tr_strategy_loss -
-                    #                                                                     logging_strategy_loss) / args.logging_steps,
-                    #             (tr_intensity_loss - logging_intensity_loss) / args.logging_steps)
+                    print(
+                        "lr: %f, step: %d, loss: %f"%(scheduler.get_last_lr()[0],
+                        global_step, (tr_loss - logging_loss) / args.logging_steps)
+                    )
 
                     logging_loss = tr_loss
-                    # logging_lm_loss = tr_lm_loss
-                    # logging_emo_loss = tr_emo_loss
-                    # logging_strategy_loss = tr_strategy_loss
-                    # logging_intensity_loss = tr_intensity_loss
-                    if results['eval_perplexity'] < best_ppl:
-                        best_ppl = results['eval_perplexity']
+
+                    if results['eval_loss'] < best_loss:
+                        best_loss = results['eval_loss']
 
                         checkpoint_prefix = "checkpoint"
 
@@ -397,9 +349,10 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
                         model_to_save = (
                             model.module if hasattr(model, "module") else model
                         )  # Take care of distributed/parallel training
-                        model_to_save.save_pretrained(output_dir)
+                        # model_to_save.save_pretrained(output_dir)
+                        torch.save(model_to_save, os.path.join(
+                            output_dir, "pytorch_model.bin"))
                         tokenizer.save_pretrained(output_dir)
-
                         torch.save(args, os.path.join(
                             output_dir, "training_args.bin"))
                         logger.info(
@@ -426,7 +379,6 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
     print("Train finished~")
     return global_step, tr_loss / global_step
 
-# Evaluation of some model
 
 
 def evaluate(args, model: PreTrainedModel, tokenizer: PreTrainedTokenizer, eval_dataset, prefix="") -> Dict:
@@ -446,7 +398,7 @@ def evaluate(args, model: PreTrainedModel, tokenizer: PreTrainedTokenizer, eval_
 
     eval_sampler = SequentialSampler(eval_dataset)
     eval_dataloader = DataLoader(
-        eval_dataset, sampler=eval_sampler, batch_size=args.eval_batch_size, collate_fn=ESDDatasetBlenderbot.collate, drop_last=False
+        eval_dataset, sampler=eval_sampler, batch_size=args.eval_batch_size, collate_fn=args.eval_dataset.collate, drop_last=False
     )
 
     if args.fp16:
@@ -465,6 +417,8 @@ def evaluate(args, model: PreTrainedModel, tokenizer: PreTrainedTokenizer, eval_
     logger.info("  Num examples = %d", len(eval_dataset))
     logger.info("  Batch size = %d", args.eval_batch_size)
     eval_loss = 0.0
+    eval_acc = 0.0
+    eval_f1 = 0.0
     nb_eval_steps = 0
     model.eval()
 
@@ -475,9 +429,16 @@ def evaluate(args, model: PreTrainedModel, tokenizer: PreTrainedTokenizer, eval_
     # strategy_hits_topk = [[] for _ in range(7)]
     strategy_hits = []
 
+    criterion = nn.CrossEntropyLoss().to(args.device)
+
     for batch in tqdm(eval_dataloader, desc="Evaluating..."):
         model.train()
-        input_ids, position_ids, turn_ids, role_ids, labels, cls_positions, cls_labels, strategy_ids, decoder_input_ids, decoder_position_ids, decoder_turn_ids, decoder_role_ids, decoder_labels, decoder_cls_positions, decoder_cls_labels, decoder_strategy_ids, comet_ids, comet_mask, emotion, comet_ids_st, comet_mask_st = batch
+        
+        
+        input_ids, position_ids, turn_ids, role_ids, labels, cls_positions, cls_labels, strategy_ids, decoder_input_ids, decoder_position_ids, decoder_turn_ids, \
+            decoder_role_ids, decoder_labels, decoder_cls_positions, decoder_cls_labels, decoder_strategy_ids, comet_ids, comet_mask, emotion, comet_ids_st, comet_mask_st, comet_by_step_ids, comet_by_step_mask = batch
+            
+        
         if input_ids.shape[1] > 512:
             continue
 
@@ -493,18 +454,18 @@ def evaluate(args, model: PreTrainedModel, tokenizer: PreTrainedTokenizer, eval_
         batch_size, n_attr, len_attr = comet_ids.shape
         comet_ids = comet_ids.view(-1, len_attr)
 
-        with torch.no_grad():
-            comet_embs = model.model.encoder(
-                comet_ids, attention_mask=comet_ids.ne(tokenizer.pad_token_id))[0][:, 0, :]
+        # with torch.no_grad():
+        #     comet_embs = model.model.encoder(
+        #         comet_ids, attention_mask=comet_ids.ne(tokenizer.pad_token_id))[0][:, 0, :]
 
-        comet_embs = comet_embs.view(batch_size, n_attr, -1)
-        batch_size, n_attr, len_attr = comet_ids_st.shape
-        comet_ids_st = comet_ids_st.view(-1, len_attr)
+        # comet_embs = comet_embs.view(batch_size, n_attr, -1)
+        # batch_size, n_attr, len_attr = comet_ids_st.shape
+        # comet_ids_st = comet_ids_st.view(-1, len_attr)
 
-        with torch.no_grad():
-            comet_embs_st = model.model.encoder(
-                comet_ids_st, attention_mask=comet_ids_st.ne(tokenizer.pad_token_id))[0][:, 0, :]
-        comet_embs_st = comet_embs_st.view(batch_size, n_attr, -1)
+        # with torch.no_grad():
+        #     comet_embs_st = model.model.encoder(
+        #         comet_ids_st, attention_mask=comet_ids_st.ne(tokenizer.pad_token_id))[0][:, 0, :]
+        # comet_embs_st = comet_embs_st.view(batch_size, n_attr, -1)
 
         input_ids = input_ids.to(args.device)
         turn_ids = turn_ids.to(args.device)
@@ -532,60 +493,48 @@ def evaluate(args, model: PreTrainedModel, tokenizer: PreTrainedTokenizer, eval_
                 # model outputs are always tuple in transformers (see doc)
                 ppl = loss = outputs[0]
             else:
-                outputs = model(input_ids, attention_mask=input_ids.ne(tokenizer.pad_token_id), decoder_input_ids=decoder_input_ids, labels=decoder_label_ids,
-                    # decoder_turn_ids=decoder_turn_ids, decoder_role_ids=decoder_role_ids, turn_ids=turn_ids,
-                    # role_ids=role_ids, decoder_strategy_ids=decoder_strategy_ids, 
-                    # comet_embs=comet_embs, comet_mask=comet_mask, comet_embs_st=comet_embs_st, 
-                    # comet_mask_st=comet_mask_st, emotion=emotion
+                inputs = decoder_label_ids.cpu()[:, 1:]
+                inputs[(inputs==args.tokenizer.pad_token_id) | (inputs==-100)] = args.tokenizer.pad_token_id
+                lengths = (inputs!=args.tokenizer.pad_token_id).sum(axis=1)
+                inputs = inputs.to(args.device)
+
+                scores = model(inputs, lengths)
+
+                classification_targets = model.convert_tokenIds_to_strategyIds(decoder_strategy_ids)
+                classification_targets = torch.tensor(classification_targets).to(args.device)
+                expanded_labels = classification_targets.unsqueeze(1).expand(-1, scores.shape[1]) # batch x seq
+                length_mask = pad_mask(lengths).permute(1, 0) # batch x seq
+                loss = criterion(
+                    scores.flatten(0, 1)[length_mask.flatten()==1], 
+                    expanded_labels.flatten()[length_mask.flatten()==1]
                 )
-                loss = outputs.loss
-                # print(outputs)
 
-                # emo_logits = outputs.emo_logits
-                # strategy_logits = outputs.strategy_logits
+                # calculate accuracy and f1
+                preds = scores.max(-1).indices
+                preds = preds[length_mask==1].flatten()
+                targets = expanded_labels[length_mask==1].flatten()
+                acc = (preds==targets).sum().item() / targets.shape[0]
+                f1 = f1_score(targets.cpu(), preds.cpu(), average='micro')
 
-            # print(strategy_logits.argmax(dim=-1))
-            # for idx, emo_logit in enumerate(emo_logits):
-            #     if emo_logit.argmax() == emotion[idx]:
-            #         emo_hits.append(1)
-            #     else:
-            #         emo_hits.append(0)
-
-            # print(decoder_input_ids)
-            # strategy_ids = decoder_input_ids[:, 0] - 54944
-
-            # for idx, strategy_logit in enumerate(strategy_logits):
-            #     if strategy_logit.argmax() == decoder_strategy_ids[idx]:
-            #         strategy_hits.append(1)
-            #     else:
-            #         strategy_hits.append(0)
-
-            # if args.strategy:
-            #     cls_labels_list.extend(decoder_cls_labels.cpu().numpy().tolist())
-            #     strategy_probs.append(torch.nn.functional.softmax(outputs.lm_logits[0, 0, 54945:54945+8], dim=-1).cpu().numpy().tolist())
-
-            # lm_loss = outputs.lm_loss
-            # ppl = torch.exp(loss)
-            num_samples.append(
-                (decoder_label_ids.cpu().numpy() != -100).astype(np.int64).sum()
-            )
-            eval_loss += loss.sum().item() * (decoder_label_ids.cpu().numpy()
-                                                != -100).astype(np.int64).sum()
-
+            eval_loss += loss.item()
+            eval_acc += acc
+            eval_f1 += f1
 
         nb_eval_steps += 1
 
-    eval_loss = eval_loss / sum(num_samples)
-    perplexity = torch.exp(torch.tensor(eval_loss)).item()
-    print("Eval perplexity: ", perplexity)
+    eval_loss = eval_loss / nb_eval_steps
+    eval_acc = eval_acc / nb_eval_steps
+    eval_f1 = eval_f1 / nb_eval_steps
+    print("Eval loss: ", eval_loss)
+    print("Eval acc: ", eval_acc)
+    print("Eval f1: ", eval_f1)
     # np_strategy = np.array(strategy_probs)
     # np_cls_labels = np.array(cls_labels_list)
     # result = {"eval_perplexity": perplexity, "eval_emotion_predict_accuracy": sum(emo_hits)/len(emo_hits), "eval_strategy_predict_accuracy": sum(strategy_hits)/len(strategy_hits), "eval_number_of_evaluated_examples": len(emo_hits)}
     result = {
-        "eval_perplexity": perplexity, 
-        # "eval_emotion_predict_accuracy": sum(emo_hits) / len(emo_hits), 
-        # "eval_strategy_predict_accuracy": sum(strategy_hits) / len(strategy_hits),
-        # "eval_number_of_evaluated_examples": len(emo_hits)
+        "eval_loss": eval_loss, 
+        "eval_acc": eval_acc,
+        "eval_f1": eval_f1,
     }
     output_eval_file = os.path.join(eval_output_dir, "eval_results.txt")
 
@@ -600,20 +549,19 @@ def evaluate(args, model: PreTrainedModel, tokenizer: PreTrainedTokenizer, eval_
 
     return result
 
-def generate(args):
+
+def generate(args, model):
     tokenizer = args.tokenizer
     # print(tokenizer.encode(['others]']))
     # print(1 / 0)
 
-    model = BlenderbotATOMIC2020.from_pretrained(args.output_dir,
-        from_tf=False)
     # C = model.model.encoder.strategy_embedding.weight[:8,:]
     # C = C.cpu().detach().numpy()
     # from sklearn.metrics.pairwise import cosine_similarity
     # print(cosine_similarity(C))
 
     # print(1/0)
-    model.resize_token_embeddings(len(tokenizer))
+    # model.resize_token_embeddings(len(tokenizer))
     #model.resize_token_embeddings(54944) 
 
     # Setup CUDA, GPU & distributed training
@@ -631,13 +579,12 @@ def generate(args):
 
     with open(args.data_path+"/"+args.test_file_name,"r") as f:
         chat_texts = f.read().split("\n")
-        # for line in f.readlines():
-        #     chat_texts.append(line)
     with open(args.data_path+"/"+ args.situation_test_comet_file, "r", encoding="utf-8") as f:
         comet_st = f.read().split("\n")
-
     with open(args.data_path+"/"+ args.test_comet_file, "r", encoding="utf-8") as f:
         comet = f.read().split("\n")
+    with open(args.data_path+"/" + args.situation_test_file_name, "r", encoding="utf-8") as f:
+        st_test = f.read().split("\n")
 
     assert len(comet) == len(chat_texts) == len(comet_st)
     gts = []
@@ -650,7 +597,7 @@ def generate(args):
     strategy_hits = []
     strategy_record = []
     strategy_hits_topk = [[] for _ in range(8)]
-    for idx, (c_text, comet_row, comet_st_row) in tqdm(enumerate(zip(chat_texts[:-1], comet[:-1], comet_st[:-1])), desc="Testing", total=len(chat_texts[:-1])):
+    for idx, (c_text, comet_row, comet_st_row, st_row) in tqdm(enumerate(zip(chat_texts[:-1], comet[:-1], comet_st[:-1], st_test[:-1])), desc="Testing", total=len(chat_texts[:-1])):
         if "EOS" not in c_text:
             continue
         # if idx>=100:
@@ -660,8 +607,7 @@ def generate(args):
         # gts.append(" ".join(tokens[1:]))
         # = max(tokenizer.encode(tokens[0]))
         chat_history = c_text
-        
-        f = args.test_dataset.construct_conv_ESD(idx, chat_history, comet_row, comet_st_row, tokenizer, eos = True, pad=False, cls=False, strategy=False, generation=True)
+        f = args.test_dataset.construct_conv_ESD(idx, chat_history, comet_row, comet_st_row, st_row, tokenizer, eos = True, pad=False, cls=False, strategy=False, generation=True, add_situ=False)
         if len(f.input_ids) >= args.block_size:
             f.input_ids = f.input_ids[-args.block_size:]
             f.input_ids[0] = tokenizer.encode(tokenizer.cls_token)[0]
@@ -681,21 +627,23 @@ def generate(args):
         comet_mask = torch.tensor([f.comet_mask], dtype=torch.long)
         comet_ids_st = torch.tensor([f.comet_st_ids], dtype=torch.long)
         comet_mask_st = torch.tensor([f.comet_st_mask], dtype=torch.long)
+        next_strategy_id = torch.tensor([next_strategy_id], dtype=torch.long)
 
         comet_ids = comet_ids.to(args.device)
         comet_mask = comet_mask.to(args.device)
         comet_ids_st = comet_ids_st.to(args.device)
         comet_mask_st = comet_mask_st.to(args.device)
+        next_strategy_id = next_strategy_id.to(args.device)
 
-        batch_size, n_attr, len_attr = comet_ids.shape
-        comet_ids = comet_ids.view(-1, len_attr)
-        comet_embs = model.model.encoder(comet_ids, attention_mask=comet_ids.ne(tokenizer.pad_token_id))[0][:, 0, :]
-        comet_embs = comet_embs.view(batch_size, n_attr, -1)
+        # batch_size, n_attr, len_attr = comet_ids.shape
+        # comet_ids = comet_ids.view(-1, len_attr)
+        # comet_embs = model.model.encoder(comet_ids, attention_mask=comet_ids.ne(tokenizer.pad_token_id))[0][:, 0, :]
+        # comet_embs = comet_embs.view(batch_size, n_attr, -1)
 
-        batch_size, n_attr, len_attr = comet_ids_st.shape
-        comet_ids_st = comet_ids_st.view(-1, len_attr)
-        comet_embs_st = model.model.encoder(comet_ids_st, attention_mask=comet_ids_st.ne(tokenizer.pad_token_id))[0][:, 0, :]
-        comet_embs_st = comet_embs_st.view(batch_size, n_attr, -1)
+        # batch_size, n_attr, len_attr = comet_ids_st.shape
+        # comet_ids_st = comet_ids_st.view(-1, len_attr)
+        # comet_embs_st = model.model.encoder(comet_ids_st, attention_mask=comet_ids_st.ne(tokenizer.pad_token_id))[0][:, 0, :]
+        # comet_embs_st = comet_embs_st.view(batch_size, n_attr, -1)
 
         paras = {}
         input_ids = torch.tensor([f.input_ids], dtype=torch.long).to(args.device)
@@ -718,13 +666,30 @@ def generate(args):
         # print(tokenizer.decode(input_ids[0]))
         # print(input_ids)
 
-        chat_history_ids = model.generate(
-            input_ids,
-            **paras, max_length=100,min_length=5,num_beams=1,
-            pad_token_id=0,use_cache=True,
-            eos_token_id=tokenizer.eos_token_id, temperature=0.7,
-            top_p=0.3, top_k = 30, do_sample=True, repetition_penalty=1.03
-        ) #top_p 0.9, topk 30
+        if args.generate_strategy:
+            strategies = model.generate_strategy(input_ids, next_strategy_id, use_gts=args.use_gts_strategy, **paras)
+            # strategies = tokenizer.encode(tokenizer.decode(strategies))[:-1]
+            # strategies = torch.tensor(strategies, dtype=torch.long).to(args.device)
+            # append strategy to input_ids
+            # input_ids = torch.cat([input_ids.squeeze(), strategies]).unsqueeze(0)
+            chat_history_ids = model.generate(
+                input_ids,
+                decoder_start_token_id = strategies,
+                # **paras, 
+                max_length=100,min_length=5,num_beams=1,
+                pad_token_id=tokenizer.pad_token_id,use_cache=True,
+                eos_token_id=tokenizer.eos_token_id, temperature=0.7,
+                top_p=0.3, top_k = 30, do_sample=True, repetition_penalty=1.03
+            ) #top_p 0.9, topk 30
+            # raise NotImplementedError
+        else:
+            chat_history_ids = model.generate(
+                input_ids,
+                **paras, max_length=100,min_length=5,num_beams=1,
+                pad_token_id=tokenizer.pad_token_id,use_cache=True,
+                eos_token_id=tokenizer.eos_token_id, temperature=0.7,
+                top_p=0.3, top_k = 30, do_sample=True, repetition_penalty=1.03
+            ) #top_p 0.9, topk 30
 
         # print(tokenizer.decode(chat_history_ids[:, :][0][2:], skip_special_tokens=True))
         # raise Exception("stop")
@@ -742,7 +707,14 @@ def generate(args):
         #     strategy_hits.append(1)
         # else:
         #     strategy_hits.append(0)
-        refs.append(tokenizer.decode(chat_history_ids[:, :][0], skip_special_tokens=True))
+        
+        # if args.generate_strategy:
+        #     output_ids = torch.cat([strategies.cpu(), chat_history_ids[:, :][0]])
+        # else:
+        #     output_ids = chat_history_ids[:, :][0]
+        output_ids = chat_history_ids[:, :][0]
+
+        refs.append(tokenizer.decode(output_ids, skip_special_tokens=True))
         # print(tokenizer.decode(chat_history_ids[:, :][0], skip_special_tokens=True))
         # strategy_record.append({"ref strategy":tokenizer.decode([next_strategy_id + 54944]),  "hyp strategy":tokenizer.decode([strategy_logits[0].argmax()+54944])})
         # print({"ref strategy":tokenizer.decode([next_strategy_id + 54944]),  "hyp strategy":tokenizer.decode([chat_history_ids[:, :][0][1]])})
@@ -796,6 +768,202 @@ def generate(args):
     print(result)
     print("=" * 100)
 
+    with open(summary_file_path, 'a', encoding='utf-8') as f:
+        f.write("\n")
+        f.write(str(result))
+
+
+
+def predict_formality(model, tokenizer, conditioning_model, target_attr_idx, encoder_input_ids, decoder_start_token_id=None, precondition_topk=200, do_sample=False, length_cutoff=512, condition_lambda=1.0, device='cuda'):
+    with torch.no_grad():
+        # batch_size = len(input_text)
+        # assumes initially all same length.
+        # encoded_input = [tokenizer.encode(it, return_tensors='pt').to(device) for it in input_text] # batch x seq
+        # encoded_input = torch.cat(encoded_input, dim=0)
+
+        # input_ids = torch.LongTensor([[58100]]).to(device)
+        if decoder_start_token_id:
+            input_ids = torch.LongTensor([[decoder_start_token_id]]).to(device)
+        else:
+            input_ids = torch.LongTensor([[tokenizer.bos_token_id]]).to(device)
+        batch_size = 1
+        cur_len = 1
+        max_length = length_cutoff
+        min_length = 0
+        temperature = 1.0
+        top_k = 50
+        top_p = 1.0
+        repetition_penalty = 1.0
+        no_repeat_ngram_size = 0
+        bad_words_ids = [[tokenizer.unk_token_id]]
+        pad_token_id = tokenizer.pad_token_id
+        eos_token_id = tokenizer.eos_token_id
+        # effective_batch_size = batch_size
+        attention_mask = encoder_input_ids.new_ones(encoder_input_ids.shape)
+        use_cache = True
+        model_specific_kwargs = {'encoder_outputs': model.get_encoder()(encoder_input_ids, attention_mask=attention_mask)}
+
+        output = _generate_no_beam_search(model,
+                                        conditioning_model,
+                                        target_attr_idx,
+                                        condition_lambda,
+                                        precondition_topk,
+                                        input_ids,
+                                        cur_len,
+                                        max_length,
+                                        min_length,
+                                        do_sample,
+                                        temperature,
+                                        top_k,
+                                        top_p,
+                                        repetition_penalty,
+                                        no_repeat_ngram_size,
+                                        bad_words_ids,
+                                        pad_token_id,
+                                        eos_token_id,
+                                        batch_size,
+                                        attention_mask,
+                                        use_cache,
+                                        model_specific_kwargs)
+
+        # return [tokenizer.decode(s[1:]) for s in output] # 1: to delete the pad token
+        return output
+
+
+# hack of code from transformers/generation_utils.py
+# to get our conditioning
+def _generate_no_beam_search(
+        model,
+        conditioning_model,
+        target_attr_idx,
+        condition_lambda,
+        precondition_topk,
+        input_ids,
+        cur_len,
+        max_length,
+        min_length,
+        do_sample,
+        temperature,
+        top_k,
+        top_p,
+        repetition_penalty,
+        no_repeat_ngram_size,
+        bad_words_ids,
+        pad_token_id,
+        eos_token_id,
+        batch_size,
+        attention_mask,
+        use_cache,
+        model_kwargs,
+    ):
+        """Generate sequences for each example without beam search (num_beams == 1).
+        All returned sequence are generated independantly.
+        """
+        # length of generated sentences / unfinished sentences
+        unfinished_sents = input_ids.new(batch_size).fill_(1)
+        sent_lengths = input_ids.new(batch_size).fill_(max_length)
+
+        past = None
+        while cur_len < max_length:
+            model_inputs = model.prepare_inputs_for_generation(
+                input_ids, past=past, attention_mask=attention_mask, use_cache=use_cache, **model_kwargs
+            )
+
+            outputs = model(**model_inputs, return_dict=True)
+            next_token_logits = outputs.logits[:, -1, :]
+
+            # scores = model.postprocess_next_token_scores(
+            #     scores=next_token_logits,
+            #     input_ids=input_ids,
+            #     no_repeat_ngram_size=no_repeat_ngram_size,
+            #     bad_words_ids=bad_words_ids,
+            #     cur_len=cur_len,
+            #     min_length=min_length,
+            #     max_length=max_length,
+            #     eos_token_id=eos_token_id,
+            #     repetition_penalty=repetition_penalty,
+            #     batch_size=batch_size,
+            #     num_beams=1,
+            # )
+            # scores = model.logits_processor(input_ids, next_token_logits)
+            scores = next_token_logits
+            scores = scores.softmax(-1)
+            scores = scores - torch.log(1 + torch.exp(scores))
+
+            # if model has past, then set the past variable to speed up decoding
+            if "past_key_values" in outputs:
+                past = outputs.past_key_values
+            elif "mems" in outputs:
+                past = outputs.mems
+
+            top_logits, top_indices = scores.topk(precondition_topk, dim=1) # batch x topk
+            tplus1_candidates = torch.cat([input_ids.unsqueeze(1).expand(-1, precondition_topk, -1), top_indices.unsqueeze(2)], dim=2)[:, :, 1:] # batch x topk x seq+1, with pad dropped
+            expanded_lengths = torch.LongTensor([[cur_len for _ in range(precondition_topk)] for _ in range(batch_size)]).to(scores.device)
+            if condition_lambda == 0:
+                condition_logits = torch.zeros_like(top_logits).float()
+            else:
+                condition_logits = conditioning_model(
+                    tplus1_candidates.flatten(0, 1), # batch*topk x seq+1
+                    expanded_lengths.flatten(0, 1), # batch*topk
+                )
+                # take only the target attribute dimension
+                condition_logits = condition_logits[:, :, target_attr_idx]
+                condition_logits = condition_logits.view(batch_size, precondition_topk, -1)[:, :, -1] # batch x topk of last formality pred
+                condition_logits = condition_logits - torch.log(1 + torch.exp(condition_logits)) # get correct log probs
+                # condition_logits = - torch.log(1 + torch.exp(condition_logits)) # for informal
+            full_logits = top_logits + condition_lambda * condition_logits
+            if do_sample:
+                raise NotImplementedError
+            else:
+                # Greedy decoding
+                next_token = top_indices[torch.arange(batch_size).to(top_indices.device), torch.argmax(full_logits, dim=-1)]
+
+            # if do_sample:
+            #     # Temperature (higher temperature => more likely to sample low probability tokens)
+            #     if temperature != 1.0:
+            #         scores = scores / temperature
+            #     # Top-p/top-k filtering
+            #     next_token_logscores = top_k_top_p_filtering(scores, top_k=top_k, top_p=top_p)
+            #     # Sample
+            #     probs = F.softmax(next_token_logscores, dim=-1)
+            #     next_token = torch.multinomial(probs, num_samples=1).squeeze(1)
+            # else:
+            #     # Greedy decoding
+            #     next_token = torch.argmax(next_token_logits, dim=-1)
+
+            # update generations and finished sentences
+            if eos_token_id is not None:
+                # pad finished sentences if eos_token_id exist
+                tokens_to_add = next_token * unfinished_sents + (pad_token_id) * (1 - unfinished_sents)
+            else:
+                tokens_to_add = next_token
+            
+            # add token and increase length by one
+            input_ids = torch.cat([input_ids, tokens_to_add.unsqueeze(-1)], dim=-1)
+            cur_len = cur_len + 1
+
+            if eos_token_id is not None:
+                eos_in_sents = tokens_to_add == eos_token_id
+                # if sentence is unfinished and the token to add is eos, sent_lengths is filled with current length
+                is_sents_unfinished_and_token_to_add_is_eos = unfinished_sents.mul(eos_in_sents.long()).bool()
+                sent_lengths.masked_fill_(is_sents_unfinished_and_token_to_add_is_eos, cur_len)
+                # unfinished_sents is set to zero if eos in sentence
+                unfinished_sents.mul_((~eos_in_sents).long())
+
+            # stop when there is a </s> in each sentence, or if we exceed the maximul length
+            if unfinished_sents.max() == 0:
+                break
+
+            # extend attention_mask for new generated input if only decoder
+            if model.config.is_encoder_decoder is False:
+                attention_mask = torch.cat(
+                    [attention_mask, attention_mask.new_ones((attention_mask.shape[0], 1))], dim=-1
+                )
+
+        return input_ids
+
+
+
 
 
 
@@ -840,86 +1008,13 @@ def _rotate_checkpoints(args, checkpoint_prefix="checkpoint", use_mtime=False) -
             "Deleting older checkpoint [{}] due to args.save_total_limit".format(checkpoint))
         shutil.rmtree(checkpoint)
 
+def pad_mask(lengths: torch.LongTensor) -> torch.ByteTensor:
+    """
+    Create a mask of seq x batch where seq = max(lengths), with 0 in padding locations and 1 otherwise. 
+    """
+    # lengths: bs. Ex: [2, 3, 1]
+    max_seqlen = torch.max(lengths)
+    expanded_lengths = lengths.unsqueeze(0).repeat((max_seqlen, 1))  # [[2, 3, 1], [2, 3, 1], [2, 3, 1]]
+    indices = torch.arange(max_seqlen).unsqueeze(1).repeat((1, lengths.size(0))).to(lengths.device)  # [[0, 0, 0], [1, 1, 1], [2, 2, 2]]
 
-if __name__ == "__main__":
-    args = Args()
-
-    # Setup CUDA, GPU & distributed training
-    if not args.no_cuda:
-        device = torch.device("cuda")
-        args.n_gpu = torch.cuda.device_count()
-        args.device = device
-    else:
-        device = torch.device("cpu")
-        args.device = device
-        args.n_gpu = 0
-
-    # Set seed
-    set_seed(args)
-
-    # load tokenizer
-    tokenizer = getBlenderbotTokenizerATOMIC2020(args)
-    args.tokenizer = tokenizer
-
-    # model = BlenderbotSmallForConditionalGeneration.from_pretrained(args.model_name_or_path, cache_dir=args.model_cache_dir)
-    model = BlenderbotATOMIC2020.from_pretrained(
-        args.model_name_or_path, cache_dir=args.model_cache_dir)
-    model.resize_token_embeddings(len(tokenizer))
-    model.to(args.device)
-
-    logger.info("Training/evaluation parameters %s", args)
-
-    # Training
-    if args.do_train:
-    # if args.do_train and False:
-        # Create output directory if needed
-        os.makedirs(args.output_dir, exist_ok=True)
-
-        # Load dataset
-        with open(args.data_path+"/" + args.train_comet_file, "r", encoding="utf-8") as f:
-            comet_trn = f.read().split("\n")
-        with open(args.data_path+"/" + args.situation_train_comet_file, "r", encoding="utf-8") as f:
-            st_comet_trn = f.read().split("\n")
-        with open(args.data_path+"/" + args.train_file_name, "r", encoding="utf-8") as f:
-            df_trn = f.read().split("\n")
-
-        with open(args.data_path+"/" + args.eval_comet_file, "r", encoding="utf-8") as f:
-            comet_val = f.read().split("\n")
-        with open(args.data_path+"/" + args.situation_eval_comet_file, "r", encoding="utf-8") as f:
-            st_comet_val = f.read().split("\n")
-        with open(args.data_path+"/" + args.eval_file_name, "r", encoding="utf-8") as f:
-            df_val = f.read().split("\n")
-
-        with open(args.data_path+"/" + args.test_comet_file, "r", encoding="utf-8") as f:
-            comet_test = f.read().split("\n")
-        with open(args.data_path+"/" + args.situation_test_comet_file, "r", encoding="utf-8") as f:
-            st_comet_test = f.read().split("\n")
-        with open(args.data_path+"/" + args.test_file_name, "r", encoding="utf-8") as f:
-            df_test = f.read().split("\n")
-
-        args.train_dataset = ESDDatasetBlenderbot(tokenizer, args, df_trn, comet_trn,
-                                        st_comet_trn, strategy=args.strategy, evaluate=False, test=False)
-        args.eval_dataset = ESDDatasetBlenderbot(tokenizer, args, df_val, comet_val,
-                                       st_comet_val, evaluate=True, strategy=args.strategy, test=False)
-        args.test_dataset = ESDDatasetBlenderbot(tokenizer, args, df_test, comet_test,
-                                       st_comet_test, evaluate=True, strategy=args.strategy, test=True)
-
-        # # Training
-        global_step, tr_loss = train(
-            args, args.train_dataset, model, tokenizer)
-        logger.info(" global_step = %s, average loss = %s",
-                    global_step, tr_loss)
-
-        # evaluation
-        model = BlenderbotATOMIC2020.from_pretrained(
-            args.output_dir, from_tf=False)
-        model.to(args.device)
-        test_results = evaluate(args, model, tokenizer,
-                                args.test_dataset, "of test set")
-        
-        # raise NotImplementedError # figure out the perplexity issue
-
-
-    generate(args)
-
-    # raise NotImplementedError
+    return expanded_lengths > indices  # pad locations are 0. #[[1, 1, 1], [1, 1, 0], [0, 1, 0]]. seqlen x bs
