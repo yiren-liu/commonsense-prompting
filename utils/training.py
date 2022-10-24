@@ -281,8 +281,8 @@ def train(args, train_dataset, model: PreTrainedModel, tokenizer: PreTrainedToke
             #         comet_ids_st, attention_mask=comet_ids_st.ne(tokenizer.pad_token_id))[0][:, 0, :]
             # comet_embs_st = comet_embs_st.view(batch_size, n_attr, -1)
 
-            if comet_by_step_ids: comet_by_step_ids = comet_by_step_ids.to(args.device)
-            if comet_by_step_mask: comet_by_step_mask = comet_by_step_mask.to(args.device)
+            if comet_by_step_ids is not None: comet_by_step_ids = comet_by_step_ids.to(args.device)
+            if comet_by_step_mask is not None: comet_by_step_mask = comet_by_step_mask.to(args.device)
             
 
             input_ids = input_ids.to(args.device)
@@ -535,8 +535,8 @@ def evaluate(args, model: PreTrainedModel, tokenizer: PreTrainedTokenizer, eval_
         comet_ids_st = comet_ids_st.to(args.device)
         comet_mask_st = comet_mask_st.to(args.device)
 
-        if comet_by_step_ids: comet_by_step_ids = comet_by_step_ids.to(args.device)
-        if comet_by_step_mask: comet_by_step_mask = comet_by_step_mask.to(args.device)
+        if comet_by_step_ids is not None: comet_by_step_ids = comet_by_step_ids.to(args.device)
+        if comet_by_step_mask is not None: comet_by_step_mask = comet_by_step_mask.to(args.device)
 
         batch_size, n_attr, len_attr = comet_ids.shape
         comet_ids = comet_ids.view(-1, len_attr)
