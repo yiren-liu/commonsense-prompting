@@ -350,6 +350,7 @@ class ESDDatasetBlenderbot(Dataset):
 
 class ESDDatasetBartCOMET2020(Dataset):
     def __init__(self, tokenizer: PreTrainedTokenizer, args, df, comet, comet_st, st, comet_by_step=None, block_size=512, evaluate=False, strategy=True, test=False, add_situ=True):
+        self.args = args
         block_size = block_size - (tokenizer.model_max_length - tokenizer.max_len_single_sentence)
         self.tokenizer = tokenizer
         self.strategyNull = self.tokenizer.encode('[None]', add_special_tokens=False)[0]
@@ -520,14 +521,19 @@ class ESDDatasetBartCOMET2020(Dataset):
         # srcs += " Response:"
         # if add_gen: srcs += " [GEN]"
         if add_gen: srcs += " Response:"
-        if add_situ: srcs = "0 0 0 Context:" + st_row.strip() + " EOS" + srcs
+        if add_situ: srcs = "0 -1 0 Context:" + st_row.strip() + " EOS" + srcs
         if comet_by_step:
             attrs = json.loads(comet_by_step)
             last_attrs = list(attrs['entailments'].values())[-1]
             attrs = []
             for r, t in last_attrs.items():
                 attrs.append(f"[{r}] {t[0]}")
-            srcs += " EOS " + "0 0 0 " + " ".join(attrs[:3])
+            # srcs += " EOS " + "0 0 0 " + ". ".join(attrs[:3])
+            srcs += " EOS " + "0 -1 0 " + ". ".join(attrs)
+            if self.args.use_comet_template:
+                for rel in self.args.comet_template.keys():
+                    srcs = srcs.replace(rel, self.args.comet_template[rel])
+                # raise Exception("not implemented")
 
 
         srcs = srcs.split(" EOS")
@@ -539,6 +545,12 @@ class ESDDatasetBartCOMET2020(Dataset):
             src_emo, src_role, src_turn, src = self._norm_text(src)
             if emotion is None:
                 emotion = src_emo
+
+            # adding role prompt
+            if src_role == 0:
+                src = "PersonX: " + src
+            elif src_role == 1:
+                src = "PersonY: " + src
 
             context_id = tokenizer.encode(src)
             if not sos: context_id = context_id[1:]
