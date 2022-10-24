@@ -37,6 +37,19 @@ class Args():
             "[None]": 8,
         }
 
+        self.comet_template = {
+            "[oEffect]": "As a result, Person Y",
+            "[oReact]": "As a result, PersonY feels",
+            "[oWant]": "As a result, PersonY wants",
+            "[xAttr]": "PersonX is seen as",
+            "[xEffect]": 'As a result, PersonX',
+            "[xIntent]": 'because PersonX wanted',
+            "[xNeed]": 'but before, PersonX needed',
+            "[xReact]": 'As a result, PersonX feels',
+            "[xReason]": 'because',
+            "[xWant]": 'As a result, PersonX wants'
+        }
+
 
         # self.model_cache_dir = './cached/models/bart/debug'
         self.model_cache_dir = './cached/models/bart/large'
@@ -70,7 +83,6 @@ class Args():
         self.no_cuda = False
         # self.no_cuda = True
         self.overwrite_output_dir = True
-        self.overwrite_cache = False
         self.should_continue = False
         self.seed = 42  # raw 42
         self.local_rank = -1
@@ -107,8 +119,14 @@ class Args():
         self.cometStep_train_file_name = "trainCometOnly_DialogueHistory_ind_lastStep.jsonl"
         self.cometStep_eval_file_name = "devCometOnly_DialogueHistory_ind_lastStep.jsonl"
         self.cometStep_test_file_name = "testCometOnly_DialogueHistory_ind_lastStep.jsonl"
-        # self.append_comet_to_input = True
-        self.append_comet_to_input = False
+        
+        self.overwrite_cache = True
+        
+        
+        self.append_comet_to_input = True
+        # self.append_comet_to_input = False
+        # self.use_comet_template = False
+        self.use_comet_template = True
 
         if self.append_comet_to_input:
             self.data_cache_dir = './cached/data/bart/add_context_add_strategy_add_cometStep'
@@ -124,8 +142,8 @@ class Args():
 
         if self.DEBUG:      
             TAG = 'debug'
-            self.per_gpu_train_batch_size = 1
-            self.per_gpu_eval_batch_size = 1
+            self.per_gpu_train_batch_size = 2
+            self.per_gpu_eval_batch_size = 2
             self.data_path = "./data/dataset/sample_5"
             self.data_cache_dir = './cached/data/bart/debug_5'
             self.model_cache_dir = './cached/models/bart/debug'
