@@ -73,7 +73,7 @@ class Args():
         self.adam_epsilon = 1e-8  # RAW 8
         self.max_grad_norm = 1.0
         # self.num_train_epochs = 8  # raw 10
-        self.num_train_epochs = 2  # raw 10
+        self.num_train_epochs = 3  # raw 10
         self.max_steps = -1
         self.warmup_steps = 120  # raw 120
         self.logging_steps = 100
@@ -95,8 +95,8 @@ class Args():
         self.turn = False
         self.role = False
 
-        self.DEBUG = True
-        # self.DEBUG = False
+        # self.DEBUG = True
+        self.DEBUG = False
 
 
         # TAG = 'genStrategyWithGold'
@@ -110,6 +110,7 @@ class Args():
         # self.strategy_predictor = "gts"
         # self.strategy_predictor = "classifier"
         self.classifier_alpha = 1.0
+
         # self.d_model = 768
         self.d_model = 1024
 
@@ -129,13 +130,23 @@ class Args():
         # TAG = 'baseline_with_noFUDGE_noCOMET'
         # TAG = 'baseline_with_noFUDGE_withAppendCOMET'
         # TAG = 'baseline_with_FUDGE_withAppendCOMET'
-        # TAG = 'baseline_noFUDGE_withAppendCOMET_lm'
-        TAG = 'baseline_noFUDGE_withAppendCOMETverbalized_lm'
+        TAG = 'baseline_noFUDGE_withAppendCOMET_lm'
+        # TAG = 'baseline_FUDGE_withAppendCOMET_lm_decodeOnly'
+        # TAG = 'baseline_FUDGE_withAppendCOMET_bertClassifier_decodeOnly'
+        # TAG = 'baseline_FUDGE_withAppendCOMET_oracle_decodeOnly'
+        # TAG = 'baseline_FUDGE_withAppendCOMETverbalized_Linear_classifier_decodeOnly'
+
+        self.generate_strategy = True
+        self.strategy_predictor = "lm"
+        # self.strategy_predictor = "bert_classifier"
+        self.classifier_alpha = 1.0
+        # self.strategy_predictor = "gts"
+        # self.strategy_predictor = "classifier"
 
         # self.pretrained_predictor_dir = None
         self.pretrained_predictor_dir = os.path.join('checkpoints', 'predictor', 'BERT__d_model__300')
-        self.use_fudge = True
-        # self.use_fudge = False
+        # self.use_fudge = True
+        self.use_fudge = False
 
 
         self.overwrite_cache = True
@@ -151,11 +162,13 @@ class Args():
             self.data_cache_dir = './cached/data/bart/add_context_add_strategy'
         
         
-        # self.do_train = True
-        self.do_train = False
+        self.do_train = True
+        # self.do_train = False
+
         # self.load_dir = os.path.join('checkpoints', 'bart', TAG)
-        self.load_dir = os.path.join('checkpoints', 'bart', 'baseline')
-        self.fudge_model_path = os.path.join('checkpoints', 'FUDGE', 'baseline__d_model__300')
+        # self.load_dir = os.path.join('checkpoints', 'bart', 'baseline_noFUDGE_withAppendCOMETverbalized_lm')
+        self.load_dir = os.path.join('checkpoints', 'bart', 'baseline_noFUDGE_withAppendCOMETverbalized_Linear_classifier')
+        self.fudge_model_path = os.path.join('checkpoints', 'FUDGE', 'bart__d_model__300')
 
         if self.DEBUG:      
             TAG = 'debug'
