@@ -110,8 +110,8 @@ class Args():
         self.classifier_alpha = 1.0
         # self.d_model = 768
         self.d_model = 1024
-        # self.use_fudge = True
-        self.use_fudge = False
+        self.use_fudge = True
+        # self.use_fudge = False
 
         self.situation_train_file_name = "trainSituation.txt"
         self.situation_eval_file_name = "devSituation.txt"
@@ -139,10 +139,10 @@ class Args():
             self.data_cache_dir = './cached/data/bart-comet2020/add_context_add_strategy'
         
 
-        self.do_train = True
-        # self.do_train = False
-        self.load_dir = os.path.join('checkpoints', 'bart-comet2020', TAG)
-        # self.load_dir = os.path.join('checkpoints', 'bart', 'baseline')
+        # self.do_train = True
+        self.do_train = False
+        # self.load_dir = os.path.join('checkpoints', 'bart-comet2020', TAG)
+        self.load_dir = os.path.join('checkpoints', 'bart', 'baseline')
         self.fudge_model_path = os.path.join('checkpoints', 'FUDGE', 'baseline__d_model__300')
 
 

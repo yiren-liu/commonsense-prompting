@@ -105,8 +105,8 @@ class Args():
 
         # TAG = 'genStrategyWithClassifier'
         self.generate_strategy = True
-        # self.strategy_predictor = "lm"
-        self.strategy_predictor = "bert_classifier"
+        self.strategy_predictor = "lm"
+        # self.strategy_predictor = "bert_classifier"
         # self.strategy_predictor = "gts"
         # self.strategy_predictor = "classifier"
         self.classifier_alpha = 1.0
@@ -153,8 +153,8 @@ class Args():
         
         # self.do_train = True
         self.do_train = False
-        self.load_dir = os.path.join('checkpoints', 'bart', TAG)
-        # self.load_dir = os.path.join('checkpoints', 'bart', 'baseline')
+        # self.load_dir = os.path.join('checkpoints', 'bart', TAG)
+        self.load_dir = os.path.join('checkpoints', 'bart', 'baseline')
         self.fudge_model_path = os.path.join('checkpoints', 'FUDGE', 'baseline__d_model__300')
 
         if self.DEBUG:      
